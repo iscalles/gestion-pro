@@ -37,11 +37,12 @@ src/
    │  └─ layout/             shell con menú lateral y navegación
    ├─ shared/
    │  ├─ ui/                 page-header, status-badge, en-construccion
-   │  └─ pipes/              clp (montos en pesos)
+   │  ├─ pipes/              clp (montos en pesos)
+   │  └─ util/               fechas ISO ↔ Date sin corrimiento de zona horaria
    └─ features/              un módulo por requerimiento, con carga diferida
       ├─ auth/login
       ├─ proyectos/          models/ data/ pages/   ← módulo de referencia, conectado a la API
-      ├─ actividades/        jerarquía + dependencias FS/SS/FF/SF + calendario
+      ├─ actividades/        conectado a la API: tabla jerárquica, detalle con predecesoras FS/SS/FF/SF, calendario laboral
       ├─ gantt/
       ├─ recursos/
       ├─ hitos/
@@ -68,3 +69,14 @@ Cada feature sigue el mismo patrón que `proyectos/`:
 | `--gp-text-on-dark-active` | `#C1FAFD` | ítem activo del menú | 12.22:1 sobre `#0C3133` |
 
 El semáforo de KPI (verde `#1F6B3A`, ámbar `#8A5300`, rojo `#A3231B`) queda fuera de la paleta de marca para que el acento turquesa nunca se confunda con un estado. Cada estado lleva además ícono y texto.
+
+## Actividades (Módulo 3)
+
+`/actividades?proyecto=ID` muestra la planificación del proyecto:
+
+- Tabla jerárquica etapa → actividad → subactividad, plegable, con fechas planificadas, avance y marca de atraso. Con poco ancho se ocultan las columnas Tipo y Responsable.
+- Panel de detalle: datos, fechas reales, avance y predecesoras (tipo FS/SS/FF/SF y desfase en días hábiles). Todo se aplica junto con **Guardar y recalcular**; el aviso previo muestra qué sucesoras se moverán y el resultado aparece en un toast. Las dependencias circulares se rechazan con el mensaje del backend.
+- Pestaña **Calendario laboral**: días hábiles, horas por día y días no laborables (solo el administrador los modifica).
+- **Nueva actividad**: el tipo se deduce de dónde se crea (sin padre = etapa).
+
+Las fechas planificadas nunca se escriben en el frontend: las calcula el motor de programación del backend.

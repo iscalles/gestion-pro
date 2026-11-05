@@ -1,0 +1,343 @@
+<div class="detalle">
+  @if (actividad().esHoja) {
+    <div class="grilla">
+      <div class="campo ancho">
+        <label for="det-nombre">Nombre</label>
+        <input
+          pInputText
+          id="det-nombre"
+          [ngModel]="nombre()"
+          (ngModelChange)="nombre.set($event)"
+          maxlength="150"
+        />
+        @if (errores()['nombre']; as e) {
+          <small class="error-campo">{{ e }}</small>
+        }
+      </div>
+      <div class="campo ancho">
+        <label for="det-resp">Responsable</label>
+        <p-select
+          inputId="det-resp"
+          [options]="opcionesResponsable()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="responsableId()"
+          (ngModelChange)="responsableId.set($event)"
+          [filter]="profesionales().length > 6"
+          appendTo="body"
+          styleClass="w-full"
+        />
+      </div>
+      <div class="campo">
+        <label for="det-dp">Duración estimada (días)</label>
+        <p-inputnumber
+          inputId="det-dp"
+          [ngModel]="duracionPlan()"
+          (ngModelChange)="duracionPlan.set($event)"
+          [min]="0"
+          [max]="9999"
+          [useGrouping]="false"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        />
+        @if (errores()['duracionPlan']; as e) {
+          <small class="error-campo">{{ e }}</small>
+        }
+      </div>
+      <div class="campo">
+        <label for="det-dr">Duración real (días)</label>
+        <p-inputnumber
+          inputId="det-dr"
+          [ngModel]="duracionReal()"
+          (ngModelChange)="duracionReal.set($event)"
+          [min]="0"
+          [max]="9999"
+          [useGrouping]="false"
+          placeholder="Al cerrar"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        />
+      </div>
+      <div class="campo">
+        <span class="etiqueta" id="det-ip">Inicio planificado</span>
+        <output class="calculado num-izq" aria-labelledby="det-ip">{{
+          actividad().fechaInicioPlan | date: 'dd-MM-yyyy'
+        }}</output>
+      </div>
+      <div class="campo">
+        <span class="etiqueta" id="det-tp">Término planificado</span>
+        <output class="calculado num-izq" aria-labelledby="det-tp">{{
+          actividad().fechaTerminoPlan | date: 'dd-MM-yyyy'
+        }}</output>
+      </div>
+      <div class="campo">
+        <label for="det-ir">Inicio real</label>
+        <p-datepicker
+          inputId="det-ir"
+          [ngModel]="inicioReal()"
+          (ngModelChange)="inicioReal.set($event)"
+          dateFormat="dd-mm-yy"
+          placeholder="dd-mm-aaaa"
+          [showClear]="true"
+          appendTo="body"
+          styleClass="w-full"
+        />
+      </div>
+      <div class="campo">
+        <label for="det-tr">Término real</label>
+        <p-datepicker
+          inputId="det-tr"
+          [ngModel]="terminoReal()"
+          (ngModelChange)="terminoReal.set($event)"
+          dateFormat="dd-mm-yy"
+          placeholder="dd-mm-aaaa"
+          [showClear]="true"
+          [minDate]="inicioReal()"
+          appendTo="body"
+          styleClass="w-full"
+        />
+      </div>
+      <div class="campo">
+        <label for="det-av">Avance (%)</label>
+        <p-inputnumber
+          inputId="det-av"
+          [ngModel]="avance()"
+          (ngModelChange)="avance.set($event)"
+          [min]="0"
+          [max]="100"
+          [maxFractionDigits]="2"
+          suffix=" %"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        />
+      </div>
+    </div>
+    <p class="nota">
+      Las fechas planificadas las calcula el motor de programación a partir de las predecesoras y
+      del calendario laboral. 100 % de avance requiere término real.
+    </p>
+
+    <section class="predecesoras" aria-labelledby="titulo-pred">
+      <div class="seccion-cabecera">
+        <h3 id="titulo-pred">Predecesoras</h3>
+        <p-button
+          label="Agregar predecesora"
+          icon="pi pi-plus"
+          size="small"
+          [outlined]="true"
+          (onClick)="agregarPredecesora()"
+          [disabled]="hayFilaIncompleta()"
+        />
+      </div>
+
+      @if (filas().length) {
+        <div class="tabla-pred">
+          <table>
+            <thead>
+              <tr>
+                <th>Actividad</th>
+                <th class="col-tipo">Tipo</th>
+                <th class="col-desfase">Desfase (días)</th>
+                <th class="col-quitar"><span class="sr-only">Quitar</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of filas(); track f.clave) {
+                <tr [class.quitada]="f.quitar">
+                  <td>
+                    @if (f.id == null) {
+                      <p-select
+                        [options]="opcionesPredecesora(f)"
+                        optionLabel="label"
+                        optionValue="value"
+                        [ngModel]="f.predecesoraId"
+                        (ngModelChange)="actualizarFila(f, { predecesoraId: $event })"
+                        placeholder="Selecciona…"
+                        [filter]="true"
+                        filterBy="label"
+                        appendTo="body"
+                        ariaLabel="Nueva predecesora"
+                        styleClass="w-full"
+                      >
+                        <ng-template #item let-o>
+                          <span class="opcion"
+                            >{{ o.label }} <small>{{ o.tipo }}</small></span
+                          >
+                        </ng-template>
+                      </p-select>
+                    } @else {
+                      <span class="pred-nombre">{{ nombreDe(f.predecesoraId) }}</span>
+                    }
+                  </td>
+                  <td>
+                    <p-select
+                      [options]="tiposDependencia"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="f.tipo"
+                      (ngModelChange)="actualizarFila(f, { tipo: $event })"
+                      [disabled]="f.quitar"
+                      appendTo="body"
+                      [ariaLabel]="
+                        'Tipo de dependencia con ' +
+                        (nombreDe(f.predecesoraId) || 'la nueva predecesora')
+                      "
+                      styleClass="select-tipo"
+                    >
+                      <ng-template #item let-o>
+                        <span class="opcion"
+                          ><strong>{{ o.label }}</strong> <small>{{ o.ayuda }}</small></span
+                        >
+                      </ng-template>
+                    </p-select>
+                  </td>
+                  <td>
+                    <p-inputnumber
+                      [ngModel]="f.desfaseDias"
+                      (ngModelChange)="actualizarFila(f, { desfaseDias: $event ?? 0 })"
+                      [min]="-999"
+                      [max]="999"
+                      [useGrouping]="false"
+                      [disabled]="f.quitar"
+                      [ariaLabel]="
+                        'Desfase en días hábiles con ' +
+                        (nombreDe(f.predecesoraId) || 'la nueva predecesora')
+                      "
+                      inputStyleClass="input-desfase"
+                    />
+                  </td>
+                  <td class="col-quitar">
+                    <p-button
+                      [icon]="f.quitar ? 'pi pi-undo' : 'pi pi-times'"
+                      [text]="true"
+                      size="small"
+                      severity="secondary"
+                      [ariaLabel]="
+                        (f.quitar ? 'Mantener ' : 'Quitar ') +
+                        (nombreDe(f.predecesoraId) || 'fila nueva')
+                      "
+                      [pTooltip]="f.quitar ? 'Mantener' : 'Quitar'"
+                      tooltipPosition="left"
+                      (onClick)="quitarFila(f)"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="vacio">Sin predecesoras: empieza con el proyecto.</p>
+      }
+      <p class="nota">
+        FS fin a inicio · SS inicio a inicio · FF fin a fin · SF inicio a fin. Desfase en días
+        hábiles, positivo (espera) o negativo (adelanto).
+      </p>
+    </section>
+  } @else {
+    <div class="grilla">
+      <div class="campo ancho">
+        <label for="det-nombre">Nombre</label>
+        <input
+          pInputText
+          id="det-nombre"
+          [ngModel]="nombre()"
+          (ngModelChange)="nombre.set($event)"
+          maxlength="150"
+        />
+      </div>
+      <div class="campo ancho">
+        <label for="det-resp">Responsable</label>
+        <p-select
+          inputId="det-resp"
+          [options]="opcionesResponsable()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="responsableId()"
+          (ngModelChange)="responsableId.set($event)"
+          appendTo="body"
+          styleClass="w-full"
+        />
+      </div>
+    </div>
+    <dl class="derivados">
+      <div>
+        <dt>Duración</dt>
+        <dd>{{ actividad().duracionPlan }} días hábiles</dd>
+      </div>
+      <div>
+        <dt>Avance</dt>
+        <dd>{{ actividad().avance }} %</dd>
+      </div>
+      <div>
+        <dt>Inicio planificado</dt>
+        <dd>{{ actividad().fechaInicioPlan | date: 'dd-MM-yyyy' }}</dd>
+      </div>
+      <div>
+        <dt>Término planificado</dt>
+        <dd>{{ actividad().fechaTerminoPlan | date: 'dd-MM-yyyy' }}</dd>
+      </div>
+      <div>
+        <dt>Inicio real</dt>
+        <dd>{{ (actividad().fechaInicioReal | date: 'dd-MM-yyyy') || '—' }}</dd>
+      </div>
+      <div>
+        <dt>Término real</dt>
+        <dd>{{ (actividad().fechaTerminoReal | date: 'dd-MM-yyyy') || '—' }}</dd>
+      </div>
+    </dl>
+    <p class="nota">
+      Duración, fechas y avance se calculan desde sus
+      {{ actividad().tipo === 'ETAPA' ? 'actividades' : 'subactividades' }}. Las dependencias se
+      definen entre elementos sin hijos.
+    </p>
+  }
+
+  <div class="campo ancho">
+    <label for="det-desc">Descripción <span class="opcional">(opcional)</span></label>
+    <textarea
+      pTextarea
+      id="det-desc"
+      rows="2"
+      [ngModel]="descripcion()"
+      (ngModelChange)="descripcion.set($event)"
+      maxlength="2000"
+    ></textarea>
+  </div>
+
+  @if (error(); as msg) {
+    <div class="alerta" role="alert">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+      <span>
+        @if (errorCodigo() === 'DEPENDENCIA_CIRCULAR') {
+          <strong>No se guardó el vínculo.</strong>
+        }
+        {{ msg }}
+      </span>
+    </div>
+  }
+
+  @if (hayCambios() && textoSucesoras()) {
+    <div class="aviso" role="status">
+      <i class="pi pi-refresh" aria-hidden="true"></i>
+      <span>{{ textoSucesoras() }}</span>
+    </div>
+  }
+
+  <div class="acciones">
+    <p-button
+      label="Cancelar"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="cancelar()"
+      [disabled]="!hayCambios() || guardando()"
+    />
+    <p-button
+      label="Guardar y recalcular"
+      icon="pi pi-check"
+      (onClick)="guardar()"
+      [disabled]="!hayCambios() || hayFilaIncompleta() || nombre().trim() === ''"
+      [loading]="guardando()"
+    />
+  </div>
+</div>

@@ -1,0 +1,186 @@
+@if (cargando()) {
+  <div class="cal" aria-busy="true" aria-label="Cargando calendario">
+    @for (i of [1, 2, 3]; track i) {
+      <p-skeleton height="1.75rem" />
+    }
+  </div>
+} @else if (calendario(); as c) {
+  <div class="cal">
+    <p class="nombre-cal"><i class="pi pi-calendar" aria-hidden="true"></i> {{ c.nombre }}</p>
+
+    <fieldset class="dias" [disabled]="!editable()">
+      <legend>Días laborables</legend>
+      <div class="dias-lista">
+        @for (d of dias; track d.valor) {
+          <label class="dia" [for]="'dia-' + d.valor">
+            <p-checkbox
+              [inputId]="'dia-' + d.valor"
+              [value]="d.valor"
+              [ngModel]="laborables()"
+              (ngModelChange)="laborables.set($event)"
+              [disabled]="!editable()"
+            />
+            <span [attr.aria-label]="d.largo">{{ d.corto }}</span>
+          </label>
+        }
+      </div>
+      @if (laborables().length === 0) {
+        <small class="error-campo">Marca al menos un día laborable.</small>
+      }
+    </fieldset>
+
+    <div class="horas">
+      <div class="campo">
+        <label for="cal-hd">Horas por día</label>
+        <p-inputnumber
+          inputId="cal-hd"
+          [ngModel]="horasDia()"
+          (ngModelChange)="horasDia.set($event)"
+          [min]="0.5"
+          [max]="24"
+          [maxFractionDigits]="2"
+          [disabled]="!editable()"
+          inputStyleClass="input-horas"
+        />
+      </div>
+      <div class="campo">
+        <span class="etiqueta" id="cal-hs">Horas por semana</span>
+        <output class="calculado" aria-labelledby="cal-hs">{{ horasSemana() }}</output>
+      </div>
+    </div>
+
+    @if (editable() && hayCambios()) {
+      <div class="acciones">
+        <p-button
+          label="Descartar"
+          severity="secondary"
+          [outlined]="true"
+          size="small"
+          (onClick)="descartar()"
+          [disabled]="guardando()"
+        />
+        <p-button
+          label="Guardar y recalcular"
+          icon="pi pi-check"
+          size="small"
+          (onClick)="guardar()"
+          [loading]="guardando()"
+          [disabled]="laborables().length === 0 || !horasDia()"
+        />
+      </div>
+    }
+
+    <section aria-labelledby="titulo-dnl">
+      <div class="seccion-cabecera">
+        <h3 id="titulo-dnl">Días no laborables</h3>
+        @if (editable() && !agregando()) {
+          <p-button
+            label="Agregar fecha"
+            icon="pi pi-plus"
+            size="small"
+            [outlined]="true"
+            (onClick)="agregando.set(true)"
+          />
+        }
+      </div>
+
+      @if (agregando()) {
+        <div class="nueva">
+          <div class="campo">
+            <label for="cal-nf">Fecha</label>
+            <p-datepicker
+              inputId="cal-nf"
+              [ngModel]="nuevaFecha()"
+              (ngModelChange)="nuevaFecha.set($event)"
+              dateFormat="dd-mm-yy"
+              placeholder="dd-mm-aaaa"
+              appendTo="body"
+            />
+          </div>
+          <div class="campo crece">
+            <label for="cal-nm">Motivo</label>
+            <input
+              pInputText
+              id="cal-nm"
+              [ngModel]="nuevoMotivo()"
+              (ngModelChange)="nuevoMotivo.set($event)"
+              maxlength="120"
+              placeholder="Ej.: Fiestas Patrias"
+            />
+          </div>
+          <div class="nueva-acciones">
+            <p-button
+              label="Cancelar"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              (onClick)="agregando.set(false)"
+            />
+            <p-button
+              label="Agregar"
+              size="small"
+              (onClick)="agregar()"
+              [disabled]="!puedeAgregar()"
+              [loading]="guardando()"
+            />
+          </div>
+        </div>
+      }
+
+      <div class="tabla-dnl">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-fecha">Fecha</th>
+              <th>Motivo</th>
+              @if (editable()) {
+                <th class="col-quitar"><span class="sr-only">Quitar</span></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of c.diasNoLaborables; track d.id) {
+              <tr>
+                <td class="col-fecha">{{ d.fecha | date: 'dd-MM-yyyy' }}</td>
+                <td>{{ d.motivo }}</td>
+                @if (editable()) {
+                  <td class="col-quitar">
+                    <p-button
+                      icon="pi pi-times"
+                      [text]="true"
+                      size="small"
+                      severity="secondary"
+                      [ariaLabel]="'Quitar ' + d.motivo"
+                      pTooltip="Quitar"
+                      tooltipPosition="left"
+                      (onClick)="quitar(d)"
+                      [disabled]="guardando()"
+                    />
+                  </td>
+                }
+              </tr>
+            } @empty {
+              <tr>
+                <td [attr.colspan]="editable() ? 3 : 2" class="vacio">Sin días no laborables.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    @if (error(); as msg) {
+      <p-message severity="error">{{ msg }}</p-message>
+    }
+
+    <p class="nota">
+      @if (editable()) {
+        Cambiar el calendario recalcula las fechas de todos los proyectos que lo usan.
+      } @else {
+        Solo el administrador puede modificar el calendario.
+      }
+    </p>
+  </div>
+} @else if (error(); as msg) {
+  <p-message severity="error">{{ msg }}</p-message>
+}

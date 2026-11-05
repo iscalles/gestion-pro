@@ -8,6 +8,7 @@ export interface Proyecto {
   descripcion: string | null;
   responsableId: number;
   responsable: string;
+  calendarioId: number;
   fechaInicio: string; // ISO yyyy-mm-dd
   fechaTermino: string;
   presupuesto: number;

@@ -1,0 +1,412 @@
+<p-toast position="bottom-right" />
+<p-confirmdialog [style]="{ width: 'min(440px, calc(100vw - 32px))' }" />
+
+<div class="pagina">
+  <gp-page-header
+    titulo="Actividades y dependencias"
+    descripcion="Etapas, actividades y subactividades del proyecto, con fechas, avance y precedencias."
+  >
+    <p-button
+      label="Ver en Carta Gantt"
+      [outlined]="true"
+      icon="pi pi-chart-bar"
+      routerLink="/gantt"
+      [queryParams]="{ proyecto: proyectoId() }"
+    />
+    <p-button
+      label="Nueva actividad"
+      icon="pi pi-plus"
+      (onClick)="abrirNueva()"
+      [disabled]="proyectoId() == null"
+    />
+  </gp-page-header>
+
+  @if (cargando()) {
+    <div class="panel estado-carga" aria-busy="true" aria-label="Cargando proyectos">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <p-skeleton height="1.75rem" />
+      }
+    </div>
+  } @else if (proyectos().length === 0) {
+    <div class="panel vacio-pagina">
+      @if (error(); as msg) {
+        <p-message severity="error">{{ msg }}</p-message>
+        <p-button
+          label="Reintentar"
+          icon="pi pi-refresh"
+          [outlined]="true"
+          (onClick)="reintentar()"
+        />
+      } @else {
+        <p>Todavía no tienes proyectos asignados.</p>
+      }
+    </div>
+  } @else {
+    <div class="barra">
+      <div class="campo-proyecto">
+        <label for="sel-proyecto">Proyecto</label>
+        <p-select
+          inputId="sel-proyecto"
+          [options]="opcionesProyecto()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="proyectoId()"
+          (ngModelChange)="cambiarProyecto($event)"
+          [filter]="proyectos().length > 6"
+          styleClass="select-proyecto"
+        />
+      </div>
+      @if (actividades().length) {
+        <dl class="resumen">
+          <div>
+            <dt>Plan</dt>
+            <dd>
+              {{ resumen().inicio | date: 'dd-MM-yyyy' }} →
+              {{ resumen().termino | date: 'dd-MM-yyyy' }}
+            </dd>
+          </div>
+          <div>
+            <dt>Elementos</dt>
+            <dd>{{ resumen().etapas }} etapas · {{ resumen().elementos }} en total</dd>
+          </div>
+          <div>
+            <dt>Avance del proyecto</dt>
+            <dd>{{ resumen().avance }} %</dd>
+          </div>
+          <div>
+            <dt>Atrasadas</dt>
+            <dd [class.con-atraso]="resumen().atrasadas > 0">
+              @if (resumen().atrasadas > 0) {
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              }
+              {{ resumen().atrasadas }}
+            </dd>
+          </div>
+        </dl>
+      }
+    </div>
+
+    <div class="layout">
+      <section class="panel tabla-panel" aria-label="Estructura de actividades">
+        @if (error(); as msg) {
+          <div class="estado-carga">
+            <p-message severity="error">{{ msg }}</p-message>
+            <p-button
+              label="Reintentar"
+              icon="pi pi-refresh"
+              [outlined]="true"
+              (onClick)="reintentar()"
+            />
+          </div>
+        } @else if (cargandoPlan() && !plan()) {
+          <div class="estado-carga" aria-busy="true" aria-label="Cargando actividades">
+            @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+              <p-skeleton height="1.75rem" />
+            }
+          </div>
+        } @else if (actividades().length === 0) {
+          <div class="vacio-plan">
+            <i class="pi pi-sitemap" aria-hidden="true"></i>
+            <h2>Este proyecto aún no tiene etapas</h2>
+            <p>
+              Crea la primera etapa y agrégale actividades y subactividades. Las fechas se calculan
+              solas desde las dependencias y el calendario.
+            </p>
+            <p-button
+              label="Crear la primera etapa"
+              icon="pi pi-plus"
+              (onClick)="abrirNueva(null)"
+            />
+          </div>
+        } @else {
+          <div class="tabla-herramientas">
+            <p-button
+              label="Expandir todo"
+              [text]="true"
+              size="small"
+              icon="pi pi-angle-double-down"
+              (onClick)="plegarTodo(false)"
+            />
+            <p-button
+              label="Contraer etapas"
+              [text]="true"
+              size="small"
+              icon="pi pi-angle-double-up"
+              (onClick)="plegarTodo(true)"
+            />
+          </div>
+          <p-table
+            [value]="filas()"
+            dataKey="id"
+            [tableStyle]="{ 'min-width': '560px' }"
+            styleClass="tabla-arbol"
+          >
+            <ng-template #header>
+              <tr>
+                <th class="col-nombre">Nombre</th>
+                <th class="col-tipo">Tipo</th>
+                <th class="col-resp">Responsable</th>
+                <th class="num">Duración</th>
+                <th>Inicio</th>
+                <th>Término</th>
+                <th class="col-avance">Avance</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-a>
+              <tr
+                [class.seleccionada]="a.id === seleccionId()"
+                [class.fila-etapa]="a.tipo === 'ETAPA'"
+                [class.fila-padre]="!a.esHoja"
+                (click)="seleccionar(a)"
+              >
+                <td class="col-nombre">
+                  <div class="nombre-celda" [style.padding-left.px]="a.nivel * 20">
+                    @if (!a.esHoja) {
+                      <button
+                        type="button"
+                        class="plegar"
+                        (click)="alternar(a, $event)"
+                        [attr.aria-expanded]="!plegadas().has(a.id)"
+                        [attr.aria-label]="
+                          (plegadas().has(a.id) ? 'Expandir ' : 'Contraer ') + a.nombre
+                        "
+                      >
+                        <i
+                          [class]="
+                            plegadas().has(a.id) ? 'pi pi-chevron-right' : 'pi pi-chevron-down'
+                          "
+                          aria-hidden="true"
+                        ></i>
+                      </button>
+                    } @else {
+                      <span class="plegar-espacio" aria-hidden="true"></span>
+                    }
+                    <button
+                      type="button"
+                      class="nombre-btn"
+                      (click)="seleccionar(a); $event.stopPropagation()"
+                      [attr.aria-pressed]="a.id === seleccionId()"
+                    >
+                      @if (a.atrasada) {
+                        <i
+                          class="pi pi-exclamation-circle atraso"
+                          role="img"
+                          aria-label="Atrasada"
+                          pTooltip="Atrasada: el término planificado ya pasó"
+                        ></i>
+                      }
+                      <span>{{ a.nombre }}</span>
+                    </button>
+                  </div>
+                </td>
+                <td class="col-tipo">
+                  <span class="tipo">{{ tipoEtiqueta[$any(a.tipo)] }}</span>
+                </td>
+                <td class="resp col-resp">{{ a.responsable ?? '—' }}</td>
+                <td class="num">{{ a.duracionPlan }} d</td>
+                <td class="fecha">{{ a.fechaInicioPlan | date: 'dd-MM-yyyy' }}</td>
+                <td class="fecha">{{ a.fechaTerminoPlan | date: 'dd-MM-yyyy' }}</td>
+                <td>
+                  <div class="avance">
+                    <p-progressbar
+                      [value]="a.avance"
+                      [showValue]="false"
+                      [attr.aria-label]="'Avance ' + a.avance + '%'"
+                    />
+                    <span class="num">{{ a.avance }}%</span>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+          <p class="nota-tabla">
+            Duración en días hábiles según el calendario laboral. Las etapas y actividades con hijos
+            muestran fechas y avance derivados; solo los elementos sin hijos reciben dependencias.
+          </p>
+        }
+      </section>
+
+      @if (plan(); as p) {
+        <aside class="panel lateral" aria-label="Detalle de la actividad">
+          @if (seleccion(); as s) {
+            <div class="lateral-cabecera">
+              <div class="lateral-titulo">
+                <span class="migas"
+                  >{{ tipoEtiqueta[s.tipo] }}
+                  @if (padreSeleccion(); as pa) {
+                    · {{ pa.nombre }}
+                  }
+                </span>
+                <h2>{{ s.nombre }}</h2>
+              </div>
+              <div class="lateral-acciones">
+                @if (s.tipo !== 'SUBACTIVIDAD') {
+                  <p-button
+                    icon="pi pi-plus"
+                    [text]="true"
+                    severity="secondary"
+                    [ariaLabel]="
+                      'Agregar ' +
+                      (s.tipo === 'ETAPA' ? 'actividad' : 'subactividad') +
+                      ' a ' +
+                      s.nombre
+                    "
+                    [pTooltip]="'Agregar ' + (s.tipo === 'ETAPA' ? 'actividad' : 'subactividad')"
+                    tooltipPosition="bottom"
+                    (onClick)="abrirNueva(s)"
+                  />
+                }
+                <p-button
+                  icon="pi pi-trash"
+                  [text]="true"
+                  severity="danger"
+                  [ariaLabel]="'Eliminar ' + s.nombre"
+                  pTooltip="Eliminar"
+                  tooltipPosition="bottom"
+                  (onClick)="confirmarEliminar(s)"
+                />
+              </div>
+            </div>
+          }
+          <p-tabs [value]="pestana()" (valueChange)="pestana.set($any($event))">
+            <p-tablist>
+              <p-tab value="detalle" [disabled]="!seleccion()">Detalle y precedencias</p-tab>
+              <p-tab value="calendario">Calendario laboral</p-tab>
+            </p-tablist>
+            <p-tabpanels>
+              <p-tabpanel value="detalle">
+                @if (seleccion(); as s) {
+                  <gp-detalle-actividad
+                    [actividad]="s"
+                    [actividades]="actividades()"
+                    [dependencias]="dependencias()"
+                    [profesionales]="profesionales()"
+                    [proyectoId]="p.proyectoId"
+                    (aplicado)="alAplicar($event)"
+                  />
+                } @else {
+                  <p class="nota-tabla">Selecciona una actividad para ver su detalle.</p>
+                }
+              </p-tabpanel>
+              <p-tabpanel value="calendario">
+                <gp-calendario-laboral
+                  [calendarioId]="p.calendarioId"
+                  [editable]="esAdmin()"
+                  (cambiado)="alCambiarCalendario($event)"
+                />
+              </p-tabpanel>
+            </p-tabpanels>
+          </p-tabs>
+        </aside>
+      }
+    </div>
+  }
+</div>
+
+<p-dialog
+  header="Nueva actividad"
+  [visible]="dialogoVisible()"
+  (visibleChange)="dialogoVisible.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(480px, calc(100vw - 32px))' }"
+  [draggable]="false"
+>
+  <form class="form-nueva" (ngSubmit)="crear()">
+    <div class="campo">
+      <label for="nueva-padre">Pertenece a</label>
+      <p-select
+        inputId="nueva-padre"
+        name="padre"
+        [options]="opcionesPadre()"
+        optionLabel="label"
+        optionValue="value"
+        optionDisabled="disabled"
+        [ngModel]="nuevaPadreId()"
+        (ngModelChange)="nuevaPadreId.set($event)"
+        [filter]="true"
+        filterBy="label"
+        appendTo="body"
+        styleClass="w-full"
+      >
+        <ng-template #item let-o>
+          <span class="opcion-padre" [style.padding-left.px]="o.nivel * 14">
+            {{ o.label }}
+            @if (o.nota) {
+              <small>{{ o.nota }}</small>
+            }
+          </span>
+        </ng-template>
+      </p-select>
+      <small class="ayuda"
+        >Se creará como <strong>{{ tipoNueva().toLowerCase() }}</strong
+        >.</small
+      >
+    </div>
+    <div class="campo">
+      <label for="nueva-nombre">Nombre</label>
+      <input
+        pInputText
+        id="nueva-nombre"
+        name="nombre"
+        [ngModel]="nuevoNombre()"
+        (ngModelChange)="nuevoNombre.set($event)"
+        maxlength="150"
+        autocomplete="off"
+      />
+      @if (erroresCreacion()['nombre']; as e) {
+        <small class="error-campo">{{ e }}</small>
+      }
+    </div>
+    <div class="fila-2">
+      <div class="campo">
+        <label for="nueva-resp">Responsable</label>
+        <p-select
+          inputId="nueva-resp"
+          name="responsable"
+          [options]="opcionesResponsable()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="nuevoResponsableId()"
+          (ngModelChange)="nuevoResponsableId.set($event)"
+          appendTo="body"
+          styleClass="w-full"
+        />
+      </div>
+      <div class="campo">
+        <label for="nueva-dur">Duración (días hábiles)</label>
+        <p-inputnumber
+          inputId="nueva-dur"
+          name="duracion"
+          [ngModel]="nuevaDuracion()"
+          (ngModelChange)="nuevaDuracion.set($event)"
+          [min]="0"
+          [max]="9999"
+          [useGrouping]="false"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        />
+      </div>
+    </div>
+    <p class="nota-tabla">
+      Empieza con el proyecto; después agrégale predecesoras en el panel de detalle.
+    </p>
+    @if (errorCreacion(); as msg) {
+      <p-message severity="error">{{ msg }}</p-message>
+    }
+    <div class="acciones-dialogo">
+      <p-button
+        label="Cancelar"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="dialogoVisible.set(false)"
+      />
+      <p-button
+        type="submit"
+        [label]="'Crear ' + tipoNueva().toLowerCase()"
+        icon="pi pi-check"
+        [loading]="creando()"
+        [disabled]="!nuevoNombre().trim()"
+      />
+    </div>
+  </form>
+</p-dialog>
