@@ -49,6 +49,18 @@
       </div>
     </div>
 
+    @if (error(); as msg) {
+      <div class="estado-carga">
+        <p-message severity="error">{{ msg }}</p-message>
+        <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar()" />
+      </div>
+    } @else if (cargando()) {
+      <div class="estado-carga" aria-busy="true" aria-label="Cargando proyectos">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <p-skeleton height="1.75rem" />
+        }
+      </div>
+    } @else {
     <p-table [value]="filtrados()" [tableStyle]="{ 'min-width': '880px' }" dataKey="id">
       <ng-template #header>
         <tr>
@@ -82,11 +94,16 @@
       <ng-template #emptymessage>
         <tr>
           <td colspan="8" class="vacio">
-            Ningún proyecto coincide con la búsqueda.
-            <p-button label="Limpiar filtros" [text]="true" (onClick)="limpiarFiltros()" />
+            @if (hayProyectos()) {
+              Ningún proyecto coincide con la búsqueda.
+              <p-button label="Limpiar filtros" [text]="true" (onClick)="limpiarFiltros()" />
+            } @else {
+              Todavía no tienes proyectos asignados.
+            }
           </td>
         </tr>
       </ng-template>
     </p-table>
+    }
   </section>
 </div>

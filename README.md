@@ -15,7 +15,9 @@ npm ci
 npm start          # http://localhost:4200
 ```
 
-Cuentas de demostración (mientras el backend no expone `/api/auth/login`), contraseña `demo1234`:
+Necesita el backend corriendo en `http://localhost:8080` ([iscalles/gestion-pro-backend](https://github.com/iscalles/gestion-pro-backend)): `docker compose up -d` y `./mvnw spring-boot:run`. La URL se cambia en `src/environments/environment.ts`.
+
+Cuentas de demostración (las crea el backend), contraseña `demo1234`:
 
 - `admin@gestionpro.cl`: administrador
 - `usuario@gestionpro.cl`: usuario de proyecto
@@ -30,14 +32,15 @@ src/
 └─ app/
    ├─ theme/                 preset de PrimeNG con la paleta del proyecto
    ├─ core/
-   │  ├─ auth/               sesión, guards por rol, interceptor JWT
+   │  ├─ api/                forma de los errores del backend y mensajes para el usuario
+   │  ├─ auth/               login contra la API, guards por rol, interceptor JWT (401 → login)
    │  └─ layout/             shell con menú lateral y navegación
    ├─ shared/
    │  ├─ ui/                 page-header, status-badge, en-construccion
    │  └─ pipes/              clp (montos en pesos)
    └─ features/              un módulo por requerimiento, con carga diferida
       ├─ auth/login
-      ├─ proyectos/          models/ data/ pages/   ← módulo de referencia
+      ├─ proyectos/          models/ data/ pages/   ← módulo de referencia, conectado a la API
       ├─ actividades/        jerarquía + dependencias FS/SS/FF/SF + calendario
       ├─ gantt/
       ├─ recursos/
@@ -50,7 +53,7 @@ src/
 Cada feature sigue el mismo patrón que `proyectos/`:
 
 - `models/`: interfaces TypeScript que reflejan los DTO del backend.
-- `data/`: servicio que llama a la API (hoy devuelve datos de ejemplo; ver el TODO).
+- `data/`: servicio que llama a la API con `HttpClient` y `environment.apiUrl`.
 - `pages/`: componentes de pantalla.
 - `<feature>.routes.ts`: rutas del módulo.
 

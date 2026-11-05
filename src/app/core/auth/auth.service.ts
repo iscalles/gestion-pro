@@ -1,17 +1,15 @@
-import { Injectable, computed, signal } from '@angular/core';
-import { Observable, of, throwError, delay } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { Rol, Sesion } from './auth.models';
 
 const STORAGE_KEY = 'gp.sesion';
 
-/**
- * Sesión del usuario. Mientras el backend no exponga /api/auth/login,
- * `login` valida contra dos cuentas de demostración.
- * TODO: reemplazar por `http.post<Sesion>(`${environment.apiUrl}/auth/login`, ...)`.
- */
+/** Sesión del usuario contra POST /api/auth/login (JWT). */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly http = inject(HttpClient);
   private readonly sesion = signal<Sesion | null>(this.leer());
 
   readonly usuario = computed(() => this.sesion()?.usuario ?? null);
@@ -20,24 +18,9 @@ export class AuthService {
   readonly esAdmin = computed(() => this.usuario()?.rol === 'ADMINISTRADOR');
 
   login(correo: string, clave: string): Observable<Sesion> {
-    const cuentas: Record<string, Sesion> = {
-      'admin@gestionpro.cl': {
-        token: 'demo-admin',
-        usuario: { id: 1, nombre: 'Carla Muñoz', correo: 'admin@gestionpro.cl', rol: 'ADMINISTRADOR' },
-      },
-      'usuario@gestionpro.cl': {
-        token: 'demo-usuario',
-        usuario: { id: 2, nombre: 'Tomás Vidal', correo: 'usuario@gestionpro.cl', rol: 'USUARIO_PROYECTO' },
-      },
-    };
-    const sesion = cuentas[correo.trim().toLowerCase()];
-    if (!sesion || clave !== 'demo1234') {
-      return throwError(() => new Error('El correo o la contraseña no coinciden.'));
-    }
-    return of(sesion).pipe(
-      delay(250),
-      tap((s) => this.guardar(s)),
-    );
+    return this.http
+      .post<Sesion>(`${environment.apiUrl}/auth/login`, { correo: correo.trim().toLowerCase(), clave })
+      .pipe(tap((s) => this.guardar(s)));
   }
 
   logout(): void {
@@ -59,12 +42,24 @@ export class AuthService {
     }
   }
 
+  /** Recupera la sesión guardada, descartándola si el token ya expiró. */
   private leer(): Sesion | null {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as Sesion) : null;
+      if (!raw) return null;
+      const s = JSON.parse(raw) as Sesion;
+      return tokenVigente(s.token) ? s : null;
     } catch {
       return null;
     }
+  }
+}
+
+function tokenVigente(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
   }
 }

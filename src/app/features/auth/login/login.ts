@@ -1,11 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { MessageModule } from 'primeng/message';
 import { AuthService } from '../../../core/auth/auth.service';
+import { mensajeDeError } from '../../../core/api/api-error';
 
 @Component({
   selector: 'gp-login',
@@ -19,6 +20,8 @@ export class Login {
 
   protected readonly cargando = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly sesionExpirada =
+    inject(ActivatedRoute).snapshot.queryParamMap.get('sesion') === 'expirada';
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     correo: ['', [Validators.required, Validators.email]],
@@ -46,8 +49,8 @@ export class Login {
     const { correo, clave } = this.form.getRawValue();
     this.auth.login(correo, clave).subscribe({
       next: () => this.router.navigateByUrl('/proyectos'),
-      error: (e: Error) => {
-        this.error.set(e.message);
+      error: (e: unknown) => {
+        this.error.set(mensajeDeError(e));
         this.cargando.set(false);
       },
     });

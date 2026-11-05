@@ -22,6 +22,9 @@
       <h1>Iniciar sesión</h1>
       <p class="ayuda">Usa tu correo institucional. Lo que puedes hacer depende de tu rol.</p>
 
+      @if (sesionExpirada && !error()) {
+        <p-message severity="warn">Tu sesión expiró. Vuelve a ingresar para continuar.</p-message>
+      }
       @if (error()) {
         <p-message severity="error">{{ error() }}</p-message>
       }
