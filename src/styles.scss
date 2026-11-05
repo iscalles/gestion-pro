@@ -1,0 +1,81 @@
+@use './styles/tokens';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--gp-canvas);
+  color: var(--gp-text);
+  font-family: var(--gp-font);
+  font-size: var(--gp-text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+a {
+  color: var(--gp-accent);
+}
+a:hover {
+  color: var(--gp-accent-hover);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--gp-focus);
+}
+
+// Montos y porcentajes: alineados a la derecha
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+// Panel L1: toda tabla o formulario vive dentro de uno
+.panel {
+  background: var(--gp-surface);
+  border: 1px solid var(--gp-line);
+  border-radius: var(--gp-radius-md);
+  box-shadow: var(--gp-shadow-soft);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// Campos de PrimeNG con el mismo tamaño de cuerpo que el resto de la app
+.p-inputtext,
+.p-select-label,
+.p-password-input {
+  font-size: var(--gp-text-md);
+}

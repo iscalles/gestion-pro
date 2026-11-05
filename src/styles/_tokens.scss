@@ -1,0 +1,61 @@
+// Tokens de diseño de Gestión Pro.
+// Paleta base (turquesa): #C1FAFD · #A9C8C9 · #609496 · #2C6163 · #0C3133
+// Contrastes WCAG medidos sobre blanco salvo indicación.
+
+:root {
+  // Superficies (regla 60-30-10: lienzo 60%, superficies 30%, acento 10%)
+  --gp-canvas: #f4f7f7; // L0: fondo de la app
+  --gp-surface: #ffffff; // L1: paneles, tablas, formularios
+  --gp-surface-sunken: #e9efef; // campos de solo lectura, filas de grupo
+  --gp-sidebar: #0c3133; // menú lateral (paleta)
+
+  // Texto
+  --gp-text: #0c3133; // 13.97:1
+  --gp-text-muted: #4a6466; // 6.35:1 (5.90:1 sobre el lienzo)
+  --gp-text-on-dark: #ffffff;
+  --gp-text-on-dark-muted: #a9c8c9; // 7.85:1 sobre el menú (paleta)
+  --gp-text-on-dark-active: #c1fafd; // 12.22:1 sobre el menú (paleta)
+
+  // Acento interactivo: botones, enlaces, foco, fila seleccionada
+  --gp-accent: #2c6163; // 7.01:1, con texto blanco
+  --gp-accent-hover: #1b4a4c;
+  --gp-accent-soft: #dcedee; // fondo de selección (acento sobre él 5.80:1)
+  --gp-data: #609496; // solo gráficos, íconos y bordes (3.40:1, no texto)
+
+  // Líneas
+  --gp-line: #d3e0e0;
+  --gp-line-strong: #a9c8c9;
+
+  // Semáforo de KPI y estados. Se distinguen también por ícono y texto.
+  --gp-ok: #1f6b3a; // 6.52:1
+  --gp-ok-soft: #e2f1e6;
+  --gp-warn: #8a5300; // 6.33:1
+  --gp-warn-soft: #faefd9;
+  --gp-danger: #a3231b; // 7.46:1
+  --gp-danger-soft: #fbe6e4;
+  --gp-neutral-soft: #e9efef;
+
+  // Tipografía
+  --gp-font: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --gp-text-xs: 0.75rem; // 12
+  --gp-text-sm: 0.8125rem; // 13
+  --gp-text-md: 0.875rem; // 14, cuerpo de la app
+  --gp-text-lg: 1rem; // 16
+  --gp-text-xl: 1.25rem; // 20
+  --gp-text-2xl: 1.625rem; // 26, título de página
+
+  // Espaciado (base 4px)
+  --gp-space-1: 4px;
+  --gp-space-2: 8px;
+  --gp-space-3: 12px;
+  --gp-space-4: 16px;
+  --gp-space-5: 20px;
+  --gp-space-6: 24px;
+  --gp-space-8: 32px;
+
+  // Forma y elevación
+  --gp-radius-sm: 4px; // insignias, campos
+  --gp-radius-md: 6px; // paneles
+  --gp-shadow-soft: 0 1px 3px rgba(12, 49, 51, 0.06);
+  --gp-focus: 0 0 0 2px var(--gp-surface), 0 0 0 4px var(--gp-accent);
+}

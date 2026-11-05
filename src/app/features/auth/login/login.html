@@ -1,0 +1,77 @@
+<div class="login">
+  <section class="visual" aria-hidden="true">
+    <div class="marca">
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="5" width="10" height="3" rx="1" />
+        <rect x="7" y="10.5" width="12" height="3" rx="1" />
+        <path d="M18 17l3 2.5-3 2.5-3-2.5z" />
+      </svg>
+      Gestión Pro
+    </div>
+    <div class="cronograma">
+      @for (b of barras; track $index) {
+        <span class="fila"><span class="barra" [class]="'barra ' + b[2]" [style.left.%]="b[0]" [style.width.%]="b[1]"></span></span>
+      }
+      <span class="hito" style="left: 94%"></span>
+    </div>
+    <p class="lema">Planificación, costos, indicadores y cambios del proyecto en un mismo lugar.</p>
+  </section>
+
+  <section class="acceso">
+    <form [formGroup]="form" (ngSubmit)="ingresar()" novalidate>
+      <h1>Iniciar sesión</h1>
+      <p class="ayuda">Usa tu correo institucional. Lo que puedes hacer depende de tu rol.</p>
+
+      @if (error()) {
+        <p-message severity="error">{{ error() }}</p-message>
+      }
+
+      <div class="campo">
+        <label for="correo">Correo</label>
+        <input
+          pInputText
+          id="correo"
+          type="email"
+          formControlName="correo"
+          autocomplete="username"
+          [class.ng-dirty]="invalido('correo')"
+          [attr.aria-invalid]="invalido('correo')"
+          aria-describedby="correo-error"
+        />
+        @if (invalido('correo')) {
+          <small id="correo-error" class="error">Escribe un correo válido, por ejemplo nombre&#64;gestionpro.cl.</small>
+        }
+      </div>
+
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <p-password
+          inputId="clave"
+          formControlName="clave"
+          [feedback]="false"
+          [toggleMask]="true"
+          autocomplete="current-password"
+          styleClass="ancho"
+          inputStyleClass="ancho"
+        />
+        @if (invalido('clave')) {
+          <small class="error">Escribe tu contraseña.</small>
+        }
+      </div>
+
+      <p-button type="submit" label="Ingresar" [loading]="cargando()" styleClass="ancho" />
+
+      <div class="demo">
+        <p>Cuentas de demostración (contraseña demo1234)</p>
+        <button type="button" (click)="usarCuenta('admin@gestionpro.cl')">
+          <span><strong>Carla Muñoz</strong> admin&#64;gestionpro.cl</span>
+          <span class="rol">Administrador</span>
+        </button>
+        <button type="button" (click)="usarCuenta('usuario@gestionpro.cl')">
+          <span><strong>Tomás Vidal</strong> usuario&#64;gestionpro.cl</span>
+          <span class="rol">Usuario de proyecto</span>
+        </button>
+      </div>
+    </form>
+  </section>
+</div>

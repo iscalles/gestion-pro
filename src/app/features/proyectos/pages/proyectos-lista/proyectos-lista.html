@@ -1,0 +1,92 @@
+<div class="pagina">
+  <gp-page-header
+    titulo="Proyectos"
+    descripcion="Crea, edita y cierra proyectos. El avance se calcula desde las actividades."
+  >
+    @if (esAdmin()) {
+      <p-button label="Nuevo proyecto" icon="pi pi-plus" />
+    }
+  </gp-page-header>
+
+  <dl class="resumen">
+    <div>
+      <dt>En ejecución</dt>
+      <dd>{{ resumen().activos }} <span>de {{ resumen().total }}</span></dd>
+    </div>
+    <div>
+      <dt>Presupuesto en ejecución</dt>
+      <dd class="num">{{ resumen().presupuesto | clp }}</dd>
+    </div>
+  </dl>
+
+  <section class="panel">
+    <div class="filtros">
+      <div class="campo crece">
+        <label for="buscar">Buscar</label>
+        <p-iconfield>
+          <p-inputicon class="pi pi-search" />
+          <input
+            pInputText
+            id="buscar"
+            type="search"
+            placeholder="Código, nombre o responsable"
+            [ngModel]="busqueda()"
+            (ngModelChange)="busqueda.set($event)"
+          />
+        </p-iconfield>
+      </div>
+      <div class="campo">
+        <label for="estado">Estado</label>
+        <p-select
+          inputId="estado"
+          [options]="opcionesEstado"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="estado()"
+          (ngModelChange)="estado.set($event)"
+          styleClass="select-estado"
+        />
+      </div>
+    </div>
+
+    <p-table [value]="filtrados()" [tableStyle]="{ 'min-width': '880px' }" dataKey="id">
+      <ng-template #header>
+        <tr>
+          <th>Código</th>
+          <th>Proyecto</th>
+          <th>Responsable</th>
+          <th>Inicio</th>
+          <th>Término</th>
+          <th class="num">Presupuesto</th>
+          <th>Estado</th>
+          <th class="col-avance">Avance</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-p>
+        <tr>
+          <td class="codigo">{{ p.codigo }}</td>
+          <td><a class="nombre" routerLink="/actividades" [queryParams]="{ proyecto: p.id }">{{ p.nombre }}</a></td>
+          <td>{{ p.responsable }}</td>
+          <td class="fecha">{{ p.fechaInicio | date: 'dd-MM-yyyy' }}</td>
+          <td class="fecha">{{ p.fechaTermino | date: 'dd-MM-yyyy' }}</td>
+          <td class="num">{{ p.presupuesto | clp }}</td>
+          <td><gp-status-badge [tono]="est(p.estado).tono">{{ est(p.estado).etiqueta }}</gp-status-badge></td>
+          <td>
+            <div class="avance">
+              <p-progressbar [value]="p.avance" [showValue]="false" [attr.aria-label]="'Avance ' + p.avance + '%'" />
+              <span class="num">{{ p.avance }}%</span>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="8" class="vacio">
+            Ningún proyecto coincide con la búsqueda.
+            <p-button label="Limpiar filtros" [text]="true" (onClick)="limpiarFiltros()" />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+</div>
