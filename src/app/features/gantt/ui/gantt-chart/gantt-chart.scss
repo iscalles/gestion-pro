@@ -1,0 +1,560 @@
+:host {
+  --ancho-grilla: 440px;
+  --fila: 36px;
+  display: block;
+  min-height: 0;
+}
+
+.gantt {
+  position: relative;
+  overflow: auto;
+  max-height: calc(100vh - 260px);
+  min-height: 320px;
+  background: var(--gp-surface);
+  border-radius: var(--gp-radius-md);
+  overscroll-behavior: contain;
+}
+
+.lienzo {
+  position: relative;
+}
+
+// ---------------------------------------------------------------- cabecera
+
+.cabecera {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 52px;
+  background: var(--gp-canvas);
+  border-bottom: 1px solid var(--gp-line-strong);
+}
+
+.esquina {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  flex: 0 0 var(--ancho-grilla);
+  width: var(--ancho-grilla);
+  padding: 0 0 8px;
+  background: var(--gp-canvas);
+  border-right: 1px solid var(--gp-line-strong);
+  color: var(--gp-text-muted);
+  font-size: var(--gp-text-sm);
+  font-weight: 500;
+}
+
+.escala {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.nivel {
+  position: relative;
+  height: 26px;
+
+  & + .nivel {
+    border-top: 1px solid var(--gp-line);
+  }
+}
+
+.celda {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--gp-line);
+  font-size: var(--gp-text-xs);
+  color: var(--gp-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &.superior {
+    justify-content: flex-start;
+    color: var(--gp-text);
+    font-weight: 500;
+
+    span {
+      padding: 0 8px;
+    }
+  }
+
+  &.tenue {
+    color: #7a9193;
+    background: rgba(12, 49, 51, 0.03);
+  }
+}
+
+.etiqueta-hoy {
+  position: absolute;
+  top: 3px;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--gp-sidebar);
+  color: var(--gp-text-on-dark);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  pointer-events: none;
+}
+
+// ---------------------------------------------------------------- cuerpo
+
+.cuerpo {
+  display: flex;
+  align-items: flex-start;
+}
+
+.grilla {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: 0 0 var(--ancho-grilla);
+  width: var(--ancho-grilla);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--gp-surface);
+  border-right: 1px solid var(--gp-line-strong);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  height: var(--fila);
+  border-bottom: 1px solid var(--gp-line);
+  font-size: var(--gp-text-sm);
+
+  &.etapa,
+  &.grupo {
+    background: var(--gp-surface-sunken);
+  }
+
+  &.resaltada {
+    background: var(--gp-canvas);
+  }
+
+  &.seleccionada {
+    background: var(--gp-accent-soft);
+    box-shadow: inset 3px 0 0 var(--gp-accent);
+  }
+}
+
+.c-nombre {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 8px;
+}
+
+.esquina .c-nombre {
+  padding-left: 12px;
+}
+
+.c-fecha,
+.c-avance,
+.c-estado {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--gp-text-muted);
+}
+
+.c-fecha {
+  width: 64px;
+}
+
+.c-avance {
+  width: 56px;
+  padding-right: 12px;
+  text-align: right;
+}
+
+.c-estado {
+  width: 120px;
+  padding-right: 12px;
+  text-align: right;
+  font-size: var(--gp-text-xs);
+  font-weight: 700;
+
+  &.e-cumplido {
+    color: var(--gp-ok);
+  }
+  &.e-atrasado {
+    color: var(--gp-danger);
+  }
+  &.e-riesgo {
+    color: var(--gp-warn);
+  }
+  &.e-pendiente {
+    color: var(--gp-accent);
+  }
+}
+
+.plegar,
+.plegar-espacio {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.plegar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  border: 0;
+  border-radius: var(--gp-radius-sm);
+  background: none;
+  color: var(--gp-text-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--gp-line);
+    color: var(--gp-text);
+  }
+
+  i {
+    font-size: 0.7rem;
+  }
+}
+
+.plegar-espacio {
+  margin-left: 4px;
+}
+
+.nombre {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--gp-radius-sm);
+  background: none;
+  font: inherit;
+  color: var(--gp-text);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover .texto {
+    text-decoration: underline;
+  }
+}
+
+.texto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.padre .nombre {
+  font-weight: 500;
+}
+.etapa .nombre,
+.grupo-texto {
+  font-weight: 700;
+}
+
+.grupo-texto {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 4px;
+
+  i {
+    color: var(--gp-data);
+  }
+}
+
+.fila-hito .texto {
+  padding-left: 4px;
+}
+
+.atraso {
+  color: var(--gp-danger);
+  font-size: 0.8rem;
+}
+
+// ---------------------------------------------------------------- SVG
+
+.linea-tiempo {
+  display: block;
+  flex: 0 0 auto;
+  overflow: visible;
+  font-family: var(--gp-font);
+}
+
+.fondo-etapa {
+  fill: var(--gp-surface-sunken);
+}
+.fondo-seleccion {
+  fill: var(--gp-accent-soft);
+}
+.fondo-hover {
+  fill: var(--gp-canvas);
+}
+.no-laborable {
+  fill: rgba(12, 49, 51, 0.045);
+}
+.feriado-fondo {
+  fill: rgba(138, 83, 0, 0.06);
+}
+.feriado-raya {
+  stroke: rgba(138, 83, 0, 0.22);
+  stroke-width: 1.5;
+}
+.division {
+  stroke: var(--gp-line);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.linea-fila {
+  stroke: var(--gp-line);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.hoy {
+  stroke: var(--gp-sidebar);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.vinculo {
+  fill: none;
+  stroke: var(--gp-data);
+  stroke-width: 1.25;
+  opacity: 0.75;
+
+  &.activo {
+    stroke: var(--gp-accent);
+    stroke-width: 2;
+    opacity: 1;
+  }
+}
+.punta {
+  fill: var(--gp-data);
+
+  &.activa {
+    fill: var(--gp-accent);
+  }
+}
+
+.barra {
+  cursor: pointer;
+
+  .zona {
+    fill: transparent;
+  }
+
+  &.hoja {
+    .plan {
+      fill: var(--gp-accent-soft);
+    }
+    .progreso {
+      fill: var(--gp-accent);
+    }
+    .borde {
+      fill: none;
+      stroke: var(--gp-data);
+      stroke-width: 1;
+    }
+  }
+
+  &.resumen {
+    .plan {
+      fill: var(--gp-line-strong);
+    }
+    .progreso {
+      fill: var(--gp-sidebar);
+    }
+    .tope {
+      fill: var(--gp-sidebar);
+    }
+  }
+
+  &.atrasada .borde {
+    stroke: var(--gp-danger);
+    stroke-width: 1.5;
+  }
+
+  &.seleccionada .borde {
+    stroke: var(--gp-sidebar);
+    stroke-width: 2;
+  }
+
+  &:hover .borde {
+    stroke-width: 2;
+  }
+
+  .real {
+    fill: var(--gp-sidebar);
+
+    &.desviada {
+      fill: var(--gp-warn);
+    }
+  }
+
+  .marca-atraso {
+    fill: var(--gp-danger);
+  }
+}
+
+.en-curso-fondo {
+  fill: var(--gp-sidebar);
+}
+.en-curso-raya {
+  stroke: #6b8a8c;
+  stroke-width: 3;
+}
+
+.texto-avance {
+  font-size: 11px;
+  fill: var(--gp-text-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.hito {
+  cursor: default;
+
+  .zona {
+    fill: transparent;
+  }
+  .diamante {
+    stroke: var(--gp-surface);
+    stroke-width: 1.5;
+  }
+  .fantasma {
+    fill: var(--gp-surface);
+    stroke: var(--gp-text-muted);
+    stroke-width: 1.5;
+    stroke-dasharray: 2 2;
+  }
+  .desvio {
+    stroke: var(--gp-text-muted);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 2;
+
+    &.tarde {
+      stroke: var(--gp-warn);
+    }
+  }
+  .check {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .texto-hito {
+    font-size: 12px;
+    font-weight: 700;
+    fill: var(--gp-text);
+  }
+
+  &.h-cumplido .diamante {
+    fill: var(--gp-ok);
+  }
+  &.h-pendiente .diamante {
+    fill: var(--gp-accent);
+  }
+  &.h-riesgo .diamante {
+    fill: var(--gp-warn);
+  }
+  &.h-atrasado .diamante {
+    fill: var(--gp-danger);
+  }
+  &.h-cancelado .diamante {
+    fill: var(--gp-surface);
+    stroke: var(--gp-text-muted);
+  }
+}
+
+// ---------------------------------------------------------------- tooltip
+
+.tooltip {
+  position: fixed;
+  z-index: 1100;
+  width: 340px;
+  padding: 10px 12px;
+  border: 1px solid var(--gp-line-strong);
+  border-radius: var(--gp-radius-md);
+  background: var(--gp-surface);
+  box-shadow: 0 8px 24px rgba(12, 49, 51, 0.16);
+  pointer-events: none;
+  font-size: var(--gp-text-sm);
+
+  p {
+    margin: 0;
+  }
+
+  dl {
+    margin: 8px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  div {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 8px;
+  }
+
+  dt {
+    color: var(--gp-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.tt-titulo {
+  font-weight: 700;
+}
+.tt-sub {
+  color: var(--gp-text-muted);
+  font-size: var(--gp-text-xs);
+}
+.t-danger {
+  color: var(--gp-danger);
+  font-weight: 500;
+}
+.t-warn {
+  color: var(--gp-warn);
+  font-weight: 500;
+}
+.t-ok {
+  color: var(--gp-ok);
+}
+
+@media (max-width: 900px) {
+  :host {
+    --ancho-grilla: 220px;
+  }
+  .c-fecha,
+  .c-avance,
+  .c-estado {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  :host {
+    --ancho-grilla: 160px;
+  }
+  .gantt {
+    max-height: calc(100vh - 200px);
+  }
+}

@@ -43,7 +43,7 @@ src/
       ├─ auth/login
       ├─ proyectos/          models/ data/ pages/   ← módulo de referencia, conectado a la API
       ├─ actividades/        conectado a la API: tabla jerárquica, detalle con predecesoras FS/SS/FF/SF, calendario laboral
-      ├─ gantt/
+      ├─ gantt/              Carta Gantt propia en SVG (ver abajo)
       ├─ recursos/
       ├─ hitos/
       ├─ kpi/                solo administrador
@@ -80,3 +80,16 @@ El semáforo de KPI (verde `#1F6B3A`, ámbar `#8A5300`, rojo `#A3231B`) queda fu
 - **Nueva actividad**: el tipo se deduce de dónde se crea (sin padre = etapa).
 
 Las fechas planificadas nunca se escriben en el frontend: las calcula el motor de programación del backend.
+
+## Carta Gantt (Módulo 4)
+
+`/gantt?proyecto=ID` dibuja la carta con los datos del backend (plan, hitos y calendario) y se vuelve a dibujar cada vez que cambian:
+
+- Jerarquía plegable etapa → actividad → subactividad, con la grilla fija a la izquierda.
+- Barras planificadas con el avance pintado, barra real debajo (en ámbar si termina o sigue después del plan; rayada si está en curso) y barras de resumen para los elementos con hijos.
+- Flechas FS, SS, FF y SF; las de la actividad bajo el puntero o seleccionada se resaltan.
+- Actividades atrasadas marcadas en rojo; hitos como diamantes (cumplido, pendiente, en riesgo, atrasado) con su fecha comprometida y la real o prevista.
+- Escala de días, semanas o meses; línea de hoy; fines de semana y feriados del calendario sombreados.
+- Clic en una barra o en un nombre: panel lateral con el mismo detalle de Actividades. Al guardar, el backend recalcula y la carta muestra el efecto.
+
+Se hizo a mano en lugar de usar DHTMLX Gantt porque su edición libre (MIT desde la v10) no trae capas de tareas, marcadores ni ruta crítica: sin capas no se puede dibujar la barra real bajo la planificada, que la rúbrica pide como comparación plan/real. La escala y las preferencias (plan vs real, dependencias) se recuerdan en el navegador.

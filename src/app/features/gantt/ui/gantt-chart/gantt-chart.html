@@ -1,0 +1,456 @@
+<div
+  class="gantt"
+  #contenedor
+  tabindex="0"
+  role="region"
+  aria-label="Carta Gantt: usa las flechas para desplazarte"
+>
+  <div class="lienzo" [style.width]="'calc(var(--ancho-grilla) + ' + ancho() + 'px)'">
+    <!-- Cabecera: columnas de la grilla y escala temporal -->
+    <div class="cabecera">
+      <div class="esquina" role="presentation">
+        <span class="c-nombre">Nombre</span>
+        <span class="c-fecha">Inicio</span>
+        <span class="c-fecha">Término</span>
+        <span class="c-avance">Avance</span>
+      </div>
+      <div class="escala" [style.width.px]="ancho()" aria-hidden="true">
+        <div class="nivel">
+          @for (c of escala().superior; track c.x) {
+            <span class="celda superior" [style.left.px]="c.x" [style.width.px]="c.ancho"
+              ><span>{{ c.texto }}</span></span
+            >
+          }
+        </div>
+        <div class="nivel">
+          @for (c of escala().inferior; track c.x) {
+            <span
+              class="celda"
+              [class.tenue]="c.tenue"
+              [style.left.px]="c.x"
+              [style.width.px]="c.ancho"
+              >{{ c.texto }}</span
+            >
+          }
+          <span class="etiqueta-hoy" [style.left.px]="xHoy()">Hoy</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cuerpo">
+      <!-- Grilla jerárquica: es también la versión accesible de la carta -->
+      <ul class="grilla" aria-label="Actividades e hitos">
+        @for (
+          f of filas();
+          track f.clase === 'actividad' ? 'a' + f.a.id : f.clase === 'hito' ? 'h' + f.h.id : 'g'
+        ) {
+          @switch (f.clase) {
+            @case ('actividad') {
+              <li
+                class="fila"
+                [class.etapa]="f.a.tipo === 'ETAPA'"
+                [class.padre]="!f.a.esHoja"
+                [class.seleccionada]="f.a.id === seleccionId()"
+                [class.resaltada]="f.a.id === hoverId()"
+                (mouseenter)="hoverId.set(f.a.id)"
+                (mouseleave)="hoverId.set(null)"
+              >
+                <span class="c-nombre" [style.padding-left.px]="f.a.nivel * 16">
+                  @if (!f.a.esHoja) {
+                    <button
+                      type="button"
+                      class="plegar"
+                      (click)="alternar(f.a.id, $event)"
+                      [attr.aria-expanded]="!plegadas().has(f.a.id)"
+                      [attr.aria-label]="
+                        (plegadas().has(f.a.id) ? 'Expandir ' : 'Contraer ') + f.a.nombre
+                      "
+                    >
+                      <i
+                        [class]="
+                          plegadas().has(f.a.id) ? 'pi pi-chevron-right' : 'pi pi-chevron-down'
+                        "
+                        aria-hidden="true"
+                      ></i>
+                    </button>
+                  } @else {
+                    <span class="plegar-espacio" aria-hidden="true"></span>
+                  }
+                  <button
+                    type="button"
+                    class="nombre"
+                    (click)="seleccionar.emit(f.a.id)"
+                    [attr.aria-label]="
+                      f.a.nombre +
+                      ', ' +
+                      tipoEtiqueta[f.a.tipo] +
+                      (f.a.atrasada ? ', atrasada' : '') +
+                      '. Abrir detalle'
+                    "
+                    [title]="f.a.nombre"
+                  >
+                    @if (f.a.atrasada) {
+                      <i class="pi pi-exclamation-circle atraso" aria-hidden="true"></i>
+                    }
+                    <span class="texto">{{ f.a.nombre }}</span>
+                  </button>
+                </span>
+                <span class="c-fecha"
+                  >{{ f.a.fechaInicioPlan | slice: 8 : 10 }}-{{
+                    f.a.fechaInicioPlan | slice: 5 : 7
+                  }}</span
+                >
+                <span class="c-fecha"
+                  >{{ f.a.fechaTerminoPlan | slice: 8 : 10 }}-{{
+                    f.a.fechaTerminoPlan | slice: 5 : 7
+                  }}</span
+                >
+                <span class="c-avance">{{ f.a.avance }}%</span>
+              </li>
+            }
+            @case ('grupo-hitos') {
+              <li class="fila grupo">
+                <span class="c-nombre">
+                  <button
+                    type="button"
+                    class="plegar"
+                    (click)="hitosPlegados.set(!hitosPlegados())"
+                    [attr.aria-expanded]="!hitosPlegados()"
+                    [attr.aria-label]="hitosPlegados() ? 'Expandir hitos' : 'Contraer hitos'"
+                  >
+                    <i
+                      [class]="hitosPlegados() ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"
+                      aria-hidden="true"
+                    ></i>
+                  </button>
+                  <span class="texto grupo-texto"
+                    ><i class="pi pi-flag" aria-hidden="true"></i> Hitos</span
+                  >
+                </span>
+              </li>
+            }
+            @case ('hito') {
+              <li class="fila fila-hito">
+                <span class="c-nombre" [style.padding-left.px]="16">
+                  <span class="plegar-espacio" aria-hidden="true"></span>
+                  <span class="texto" [title]="f.h.descripcion"
+                    ><strong>{{ f.h.codigo }}</strong> {{ f.h.descripcion }}</span
+                  >
+                </span>
+                <span class="c-fecha"
+                  >{{ f.h.fechaComprometida | slice: 8 : 10 }}-{{
+                    f.h.fechaComprometida | slice: 5 : 7
+                  }}</span
+                >
+                <span
+                  class="c-estado"
+                  [class]="
+                    'c-estado e-' +
+                    (f.h.enRiesgo && f.h.estadoCalculado === 'PENDIENTE'
+                      ? 'riesgo'
+                      : f.h.estadoCalculado.toLowerCase())
+                  "
+                >
+                  {{ etiquetaEstadoHito(f.h) }}
+                </span>
+              </li>
+            }
+          }
+        }
+      </ul>
+
+      <!-- Línea de tiempo (decorativa para lectores de pantalla: la grilla tiene los mismos datos) -->
+      <svg
+        class="linea-tiempo"
+        [attr.width]="ancho()"
+        [attr.height]="alto()"
+        aria-hidden="true"
+        (mouseleave)="salir()"
+      >
+        <defs>
+          <marker
+            id="gp-flecha"
+            viewBox="0 0 8 8"
+            refX="7"
+            refY="4"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto"
+          >
+            <path d="M0,0 L8,4 L0,8 z" class="punta" />
+          </marker>
+          <marker
+            id="gp-flecha-activa"
+            viewBox="0 0 8 8"
+            refX="7"
+            refY="4"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto"
+          >
+            <path d="M0,0 L8,4 L0,8 z" class="punta activa" />
+          </marker>
+          <pattern
+            id="gp-feriado"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
+            <rect width="6" height="6" class="feriado-fondo" />
+            <line x1="0" y1="0" x2="0" y2="6" class="feriado-raya" />
+          </pattern>
+          <pattern
+            id="gp-en-curso"
+            width="6"
+            height="6"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
+            <rect width="6" height="6" class="en-curso-fondo" />
+            <line x1="0" y1="0" x2="0" y2="6" class="en-curso-raya" />
+          </pattern>
+        </defs>
+
+        <!-- Fondo: filas de etapa, selección, días no laborables y divisiones de la escala -->
+        @for (f of filas(); track $index) {
+          @if (
+            f.clase === 'actividad' &&
+            (f.a.tipo === 'ETAPA' || f.a.id === seleccionId() || f.a.id === hoverId())
+          ) {
+            <rect
+              x="0"
+              [attr.y]="f.y"
+              [attr.width]="ancho()"
+              [attr.height]="FILA"
+              [class]="
+                f.a.id === seleccionId()
+                  ? 'fondo-seleccion'
+                  : f.a.id === hoverId()
+                    ? 'fondo-hover'
+                    : 'fondo-etapa'
+              "
+            />
+          }
+          @if (f.clase === 'grupo-hitos') {
+            <rect
+              x="0"
+              [attr.y]="f.y"
+              [attr.width]="ancho()"
+              [attr.height]="FILA"
+              class="fondo-etapa"
+            />
+          }
+        }
+        @for (fr of franjas(); track fr.x) {
+          <rect
+            [attr.x]="fr.x"
+            y="0"
+            [attr.width]="fr.ancho"
+            [attr.height]="alto()"
+            [attr.fill]="fr.feriado ? 'url(#gp-feriado)' : null"
+            [class]="fr.feriado ? '' : 'no-laborable'"
+          />
+        }
+        @for (c of escala().inferior; track c.x) {
+          <line [attr.x1]="c.x" [attr.x2]="c.x" y1="0" [attr.y2]="alto()" class="division" />
+        }
+        @for (f of filas(); track $index) {
+          <line
+            x1="0"
+            [attr.x2]="ancho()"
+            [attr.y1]="f.y + FILA - 0.5"
+            [attr.y2]="f.y + FILA - 0.5"
+            class="linea-fila"
+          />
+        }
+
+        <!-- Hoy -->
+        <line [attr.x1]="xHoy()" [attr.x2]="xHoy()" y1="0" [attr.y2]="alto()" class="hoy" />
+
+        <!-- Flechas de precedencia -->
+        @for (v of vinculos(); track v.id) {
+          <path
+            [attr.d]="v.d"
+            class="vinculo"
+            [class.activo]="v.activo"
+            [attr.marker-end]="v.activo ? 'url(#gp-flecha-activa)' : 'url(#gp-flecha)'"
+          />
+        }
+
+        <!-- Barras -->
+        @for (b of barras(); track b.a.id) {
+          <g
+            class="barra"
+            [class.hoja]="b.a.esHoja"
+            [class.resumen]="!b.a.esHoja"
+            [class.atrasada]="b.a.atrasada"
+            [class.seleccionada]="b.a.id === seleccionId()"
+            (mouseenter)="entrar($event, b)"
+            (mousemove)="mover($event)"
+            (mouseleave)="salir()"
+            (click)="seleccionar.emit(b.a.id)"
+          >
+            <!-- zona de clic de toda la fila -->
+            <rect
+              [attr.x]="b.x1 - 4"
+              [attr.y]="b.y + 2"
+              [attr.width]="b.x2 - b.x1 + 8"
+              [attr.height]="FILA - 4"
+              class="zona"
+            />
+            @if (b.a.esHoja) {
+              <rect
+                [attr.x]="b.x1"
+                [attr.y]="b.y + yBarra(b.a)"
+                [attr.width]="b.x2 - b.x1"
+                [attr.height]="altoBarra(b.a)"
+                rx="3"
+                class="plan"
+              />
+              @if (b.progreso > 0) {
+                <rect
+                  [attr.x]="b.x1"
+                  [attr.y]="b.y + yBarra(b.a)"
+                  [attr.width]="b.progreso"
+                  [attr.height]="altoBarra(b.a)"
+                  rx="3"
+                  class="progreso"
+                />
+              }
+              <rect
+                [attr.x]="b.x1"
+                [attr.y]="b.y + yBarra(b.a)"
+                [attr.width]="b.x2 - b.x1"
+                [attr.height]="altoBarra(b.a)"
+                rx="3"
+                class="borde"
+              />
+            } @else {
+              <rect
+                [attr.x]="b.x1"
+                [attr.y]="b.y + 12"
+                [attr.width]="b.x2 - b.x1"
+                height="8"
+                class="plan"
+              />
+              @if (b.progreso > 0) {
+                <rect
+                  [attr.x]="b.x1"
+                  [attr.y]="b.y + 12"
+                  [attr.width]="b.progreso"
+                  height="8"
+                  class="progreso"
+                />
+              }
+              <path [attr.d]="'M' + b.x1 + ',' + (b.y + 12) + ' v12 l6,-4 z'" class="tope" />
+              <path [attr.d]="'M' + b.x2 + ',' + (b.y + 12) + ' v12 l-6,-4 z'" class="tope" />
+            }
+            @if (b.real) {
+              <rect
+                [attr.x]="b.real.x1"
+                [attr.y]="b.y + (b.a.esHoja ? 25 : 25)"
+                [attr.width]="b.real.x2 - b.real.x1"
+                height="5"
+                rx="1.5"
+                class="real"
+                [class.desviada]="b.real.desviada"
+                [attr.fill]="b.real.abierta && !b.real.desviada ? 'url(#gp-en-curso)' : null"
+              />
+            }
+            @if (b.a.atrasada) {
+              <circle
+                [attr.cx]="b.x2 + 9"
+                [attr.cy]="b.y + yBarra(b.a) + altoBarra(b.a) / 2"
+                r="4.5"
+                class="marca-atraso"
+              />
+            }
+            @if (zoom() !== 'mes' || b.x2 - b.x1 > 40) {
+              <text
+                [attr.x]="b.x2 + (b.a.atrasada ? 18 : 6)"
+                [attr.y]="b.y + yBarra(b.a) + altoBarra(b.a) / 2 + 4"
+                class="texto-avance"
+              >
+                {{ b.a.avance }}%
+              </text>
+            }
+          </g>
+        }
+
+        <!-- Hitos: diamante en la fecha comprometida o real; hueco = fecha comprometida o prevista -->
+        @for (d of diamantes(); track d.h.id) {
+          <g
+            class="hito"
+            [class]="'hito h-' + d.clase"
+            (mouseenter)="entrarHito($event, d)"
+            (mousemove)="mover($event)"
+            (mouseleave)="salir()"
+          >
+            <rect
+              [attr.x]="Math.min(d.x, d.fantasma?.x ?? d.x) - 10"
+              [attr.y]="d.y + 4"
+              [attr.width]="Math.abs((d.fantasma?.x ?? d.x) - d.x) + 20"
+              [attr.height]="FILA - 8"
+              class="zona"
+            />
+            @if (d.fantasma; as f) {
+              <line
+                [attr.x1]="Math.min(d.x, f.x)"
+                [attr.x2]="Math.max(d.x, f.x)"
+                [attr.y1]="d.y + 18"
+                [attr.y2]="d.y + 18"
+                class="desvio"
+                [class.tarde]="f.desvio"
+              />
+              <rect
+                [attr.x]="f.x - 5"
+                [attr.y]="d.y + 13"
+                width="10"
+                height="10"
+                [attr.transform]="'rotate(45 ' + f.x + ' ' + (d.y + 18) + ')'"
+                class="fantasma"
+              />
+            }
+            <rect
+              [attr.x]="d.x - 7"
+              [attr.y]="d.y + 11"
+              width="14"
+              height="14"
+              [attr.transform]="'rotate(45 ' + d.x + ' ' + (d.y + 18) + ')'"
+              class="diamante"
+            />
+            @if (d.h.estado === 'CUMPLIDO') {
+              <path
+                [attr.d]="'M' + (d.x - 3.5) + ',' + (d.y + 18) + ' l2.5,2.5 l5,-5'"
+                class="check"
+              />
+            }
+            <text
+              [attr.x]="Math.max(d.x, d.fantasma?.x ?? d.x) + 14"
+              [attr.y]="d.y + 22"
+              class="texto-hito"
+            >
+              {{ d.h.codigo }}
+            </text>
+          </g>
+        }
+      </svg>
+    </div>
+  </div>
+</div>
+
+@if (tooltip(); as t) {
+  <div class="tooltip" [style.left.px]="t.x" [style.top.px]="t.y" role="tooltip">
+    <p class="tt-titulo">{{ t.titulo }}</p>
+    <p class="tt-sub">{{ t.subtitulo }}</p>
+    <dl>
+      @for (l of t.lineas; track l.etiqueta) {
+        <div>
+          <dt>{{ l.etiqueta }}</dt>
+          <dd [class]="l.tono ? 't-' + l.tono : ''">{{ l.valor }}</dd>
+        </div>
+      }
+    </dl>
+  </div>
+}

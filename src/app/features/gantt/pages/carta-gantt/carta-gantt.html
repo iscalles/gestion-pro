@@ -1,0 +1,326 @@
+<p-toast position="bottom-right" />
+
+<div class="pagina">
+  <gp-page-header
+    titulo="Carta Gantt"
+    descripcion="Se genera desde las actividades, dependencias, hitos y calendario del proyecto. Haz clic en una barra para editarla: el cambio se recalcula y la carta se actualiza."
+  >
+    <p-button
+      label="Ver actividades"
+      [outlined]="true"
+      icon="pi pi-list"
+      routerLink="/actividades"
+      [queryParams]="{ proyecto: proyectoId() }"
+    />
+  </gp-page-header>
+
+  @if (cargando()) {
+    <div class="panel estado-carga" aria-busy="true" aria-label="Cargando proyectos">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <p-skeleton height="1.75rem" />
+      }
+    </div>
+  } @else if (proyectos().length === 0) {
+    <div class="panel estado-carga">
+      @if (error(); as msg) {
+        <p-message severity="error">{{ msg }}</p-message>
+        <p-button
+          label="Reintentar"
+          icon="pi pi-refresh"
+          [outlined]="true"
+          (onClick)="reintentar()"
+        />
+      } @else {
+        <p>Todavía no tienes proyectos asignados.</p>
+      }
+    </div>
+  } @else {
+    <div class="barra">
+      <div class="campo-proyecto">
+        <label for="gantt-proyecto">Proyecto</label>
+        <p-select
+          inputId="gantt-proyecto"
+          [options]="opcionesProyecto()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="proyectoId()"
+          (ngModelChange)="cambiarProyecto($event)"
+          [filter]="proyectos().length > 6"
+          styleClass="select-proyecto"
+        />
+      </div>
+      @if (actividades().length) {
+        <dl class="resumen">
+          <div>
+            <dt>Plan calculado</dt>
+            <dd>{{ resumen().inicio }} → {{ resumen().termino }}</dd>
+          </div>
+          <div>
+            <dt>Término comprometido</dt>
+            <dd [class.alerta]="resumen().excede">
+              @if (resumen().excede) {
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              }
+              {{ resumen().comprometido }}
+            </dd>
+          </div>
+          <div>
+            <dt>Avance</dt>
+            <dd>{{ resumen().avance }} %</dd>
+          </div>
+          <div>
+            <dt>Atrasadas</dt>
+            <dd [class.alerta]="resumen().atrasadas + resumen().hitosAtrasados > 0">
+              {{ resumen().atrasadas }}
+              {{ resumen().atrasadas === 1 ? 'actividad' : 'actividades' }} ·
+              {{ resumen().hitosAtrasados }} {{ resumen().hitosAtrasados === 1 ? 'hito' : 'hitos' }}
+            </dd>
+          </div>
+        </dl>
+      }
+    </div>
+
+    <section class="panel carta" aria-label="Carta Gantt">
+      <div class="herramientas">
+        <div class="grupo-herr">
+          <span class="sr-only" id="etq-escala">Escala de tiempo</span>
+          <p-selectbutton
+            [options]="opcionesZoom"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="zoom()"
+            (ngModelChange)="$event && zoom.set($event)"
+            [allowEmpty]="false"
+            ariaLabelledBy="etq-escala"
+            size="small"
+          />
+          <p-button
+            label="Hoy"
+            icon="pi pi-calendar"
+            size="small"
+            [outlined]="true"
+            (onClick)="irAHoy()"
+          />
+        </div>
+        <div class="grupo-herr">
+          <label class="interruptor" for="sw-real">
+            <p-toggleswitch
+              inputId="sw-real"
+              [ngModel]="mostrarReal()"
+              (ngModelChange)="mostrarReal.set($event)"
+            />
+            Plan vs real
+          </label>
+          <label class="interruptor" for="sw-vinc">
+            <p-toggleswitch
+              inputId="sw-vinc"
+              [ngModel]="mostrarVinculos()"
+              (ngModelChange)="mostrarVinculos.set($event)"
+            />
+            Dependencias
+          </label>
+          <span class="plegado">
+            <p-button
+              icon="pi pi-angle-double-down"
+              [text]="true"
+              size="small"
+              severity="secondary"
+              ariaLabel="Expandir todo"
+              pTooltip="Expandir todo"
+              tooltipPosition="bottom"
+              (onClick)="plegar(false)"
+            />
+            <p-button
+              icon="pi pi-angle-double-up"
+              [text]="true"
+              size="small"
+              severity="secondary"
+              ariaLabel="Contraer etapas"
+              pTooltip="Contraer etapas"
+              tooltipPosition="bottom"
+              (onClick)="plegar(true)"
+            />
+          </span>
+        </div>
+      </div>
+
+      @if (error(); as msg) {
+        <div class="estado-carga">
+          <p-message severity="error">{{ msg }}</p-message>
+          <p-button
+            label="Reintentar"
+            icon="pi pi-refresh"
+            [outlined]="true"
+            (onClick)="reintentar()"
+          />
+        </div>
+      } @else if (cargandoPlan() && !plan()) {
+        <div class="estado-carga" aria-busy="true" aria-label="Cargando la carta">
+          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+            <p-skeleton height="1.75rem" />
+          }
+        </div>
+      } @else if (actividades().length === 0) {
+        <div class="vacio">
+          <i class="pi pi-chart-bar" aria-hidden="true"></i>
+          <h2>Este proyecto aún no tiene actividades</h2>
+          <p>La carta se genera sola a partir de las etapas, actividades y dependencias.</p>
+          <p-button
+            label="Planificar actividades"
+            icon="pi pi-list"
+            routerLink="/actividades"
+            [queryParams]="{ proyecto: proyectoId() }"
+          />
+        </div>
+      } @else if (plan(); as p) {
+        <gp-gantt-chart
+          [actividades]="p.actividades"
+          [dependencias]="p.dependencias"
+          [hitos]="hitos()"
+          [noLaborables]="noLaborables()"
+          [diasLaborables]="
+            calendario()?.diasLaborables ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+          "
+          [zoom]="zoom()"
+          [mostrarReal]="mostrarReal()"
+          [mostrarVinculos]="mostrarVinculos()"
+          [seleccionId]="seleccionId()"
+          (seleccionar)="seleccionId.set($event)"
+        />
+      }
+
+      <!-- Leyenda -->
+      <ul class="leyenda" aria-label="Leyenda">
+        <li>
+          <svg width="28" height="12" aria-hidden="true">
+            <rect x="0.5" y="1.5" width="27" height="9" rx="2" class="l-plan" />
+            <rect x="0.5" y="1.5" width="14" height="9" rx="2" class="l-progreso" /></svg
+          >Planificado y avance
+        </li>
+        @if (mostrarReal()) {
+          <li>
+            <svg width="28" height="12" aria-hidden="true">
+              <rect x="0" y="4" width="28" height="5" rx="1.5" class="l-real" /></svg
+            >Real
+          </li>
+          <li>
+            <svg width="28" height="12" aria-hidden="true">
+              <rect x="0" y="4" width="28" height="5" rx="1.5" class="l-desvio" /></svg
+            >Real que excede el plan
+          </li>
+        }
+        <li>
+          <svg width="28" height="12" aria-hidden="true">
+            <rect x="0" y="3" width="28" height="6" class="l-resumen" />
+            <path d="M0,3 v9 l5,-3 z M28,3 v9 l-5,-3 z" class="l-tope" /></svg
+          >Etapa o actividad con hijos
+        </li>
+        <li>
+          <svg width="16" height="12" aria-hidden="true">
+            <circle cx="8" cy="6" r="4.5" class="l-atraso" /></svg
+          >Atrasada
+        </li>
+        <li class="hitos-leyenda">
+          <svg width="16" height="14" aria-hidden="true">
+            <rect
+              x="3"
+              y="2"
+              width="10"
+              height="10"
+              transform="rotate(45 8 7)"
+              class="l-h-ok"
+            /></svg
+          >Cumplido
+          <svg width="16" height="14" aria-hidden="true">
+            <rect
+              x="3"
+              y="2"
+              width="10"
+              height="10"
+              transform="rotate(45 8 7)"
+              class="l-h-pend"
+            /></svg
+          >Pendiente
+          <svg width="16" height="14" aria-hidden="true">
+            <rect
+              x="3"
+              y="2"
+              width="10"
+              height="10"
+              transform="rotate(45 8 7)"
+              class="l-h-riesgo"
+            /></svg
+          >En riesgo
+          <svg width="16" height="14" aria-hidden="true">
+            <rect
+              x="3"
+              y="2"
+              width="10"
+              height="10"
+              transform="rotate(45 8 7)"
+              class="l-h-atraso"
+            /></svg
+          >Atrasado
+          <svg width="16" height="14" aria-hidden="true">
+            <rect
+              x="3.5"
+              y="2.5"
+              width="9"
+              height="9"
+              transform="rotate(45 8 7)"
+              class="l-h-fantasma"
+            /></svg
+          >Fecha comprometida o prevista
+        </li>
+        <li>
+          <svg width="16" height="12" aria-hidden="true">
+            <rect x="0" y="0" width="16" height="12" class="l-feriado" /></svg
+          >Feriado
+        </li>
+        @if (mostrarVinculos()) {
+          <li>
+            <svg width="28" height="12" aria-hidden="true">
+              <path d="M0,3 H14 V9 H24" class="l-vinculo" />
+              <path d="M22,6 L28,9 L22,12 z" class="l-punta" /></svg
+            >Dependencia
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>
+
+<p-drawer
+  [visible]="!!seleccion()"
+  (visibleChange)="!$event && cerrarPanel()"
+  position="right"
+  [style]="{ width: 'min(480px, 100vw)' }"
+  [modal]="false"
+  [dismissible]="true"
+  [closeOnEscape]="true"
+  styleClass="panel-gantt"
+>
+  <ng-template #header>
+    @if (seleccion(); as s) {
+      <div class="drawer-titulo">
+        <span class="migas"
+          >{{ tipoEtiqueta[s.tipo] }}
+          @if (padreSeleccion(); as pa) {
+            · {{ pa.nombre }}
+          }
+        </span>
+        <h2>{{ s.nombre }}</h2>
+      </div>
+    }
+  </ng-template>
+  @if (seleccion(); as s) {
+    <gp-detalle-actividad
+      [actividad]="s"
+      [actividades]="actividades()"
+      [dependencias]="plan()?.dependencias ?? []"
+      [profesionales]="profesionales()"
+      [proyectoId]="plan()!.proyectoId"
+      (aplicado)="alAplicar($event)"
+    />
+  }
+</p-drawer>
