@@ -1,0 +1,108 @@
+<section class="gp-seccion">
+  <div class="gp-seccion-cabecera">
+    <div>
+      <h2>Profesionales asignados</h2>
+      <p>Costo planificado = horas por semana × semanas de la actividad × valor hora. Las semanas siguen a la duración.</p>
+    </div>
+    <div class="gp-barra" style="margin: 0">
+      <div class="gp-campo">
+        <label for="f-prof">Profesional</label>
+        <p-select inputId="f-prof" [options]="opcionesFiltro()" optionLabel="label" optionValue="value" [ngModel]="filtroProfesional()" (ngModelChange)="filtroProfesional.set($event)" appendTo="body" />
+      </div>
+      <p-button label="Asignar profesional" icon="pi pi-plus" (onClick)="abrir(null)" />
+    </div>
+  </div>
+  <p-table [value]="filas()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '1000px' }" dataKey="id" [rows]="15" [paginator]="filas().length > 15">
+    <ng-template #header>
+      <tr>
+        <th>Actividad</th>
+        <th>Profesional</th>
+        <th class="num">h/semana</th>
+        <th class="num">Semanas</th>
+        <th class="num">Valor hora</th>
+        <th class="num">Horas plan</th>
+        <th class="num">Costo plan</th>
+        <th class="num">Horas reales</th>
+        <th class="num">Costo real</th>
+        <th><span class="sr-only">Acciones</span></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-a>
+      <tr>
+        <td>{{ a.actividad }}</td>
+        <td>
+          {{ a.profesional }}
+          @if (sobreasignados().has(a.profesionalId)) {
+            <i class="pi pi-exclamation-triangle gp-negativo" pTooltip="Sobreasignado en al menos una semana (ver Carga semanal)" aria-label="Sobreasignado" role="img"></i>
+          }
+          <br /><span class="gp-tenue">{{ a.especialidad }}</span>
+        </td>
+        <td class="num">{{ a.horasSemana | number: '1.0-1' }}</td>
+        <td class="num">{{ a.semanas | number: '1.0-2' }}</td>
+        <td class="num">{{ a.valorHora | clp }}</td>
+        <td class="num">{{ a.horasPlan | number: '1.0-1' }}</td>
+        <td class="num">{{ a.costoPlan | clp }}</td>
+        <td class="num">{{ a.horasReales | number: '1.0-1' }}</td>
+        <td class="num" [class.gp-negativo]="a.costoReal > a.costoPlan">{{ a.costoReal | clp }}</td>
+        <td>
+          <div class="gp-acciones-fila">
+            <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar asignación de ' + a.profesional" (onClick)="abrir(a)" />
+            <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" [ariaLabel]="'Quitar a ' + a.profesional" (onClick)="eliminar(a)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #footer>
+      <tr>
+        <td colspan="5">Total ({{ filas().length }})</td>
+        <td class="num">{{ totales().horas | number: '1.0-1' }}</td>
+        <td class="num">{{ totales().plan | clp }}</td>
+        <td class="num">{{ totales().reales | number: '1.0-1' }}</td>
+        <td class="num">{{ totales().real | clp }}</td>
+        <td></td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr><td colspan="10" class="gp-vacio">Aún no hay profesionales asignados.</td></tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<p-dialog [header]="editando() ? 'Editar asignación' : 'Asignar profesional'" [visible]="dialogo()" (visibleChange)="dialogo.set($event)" [modal]="true" [draggable]="false" [style]="{ width: 'min(620px, calc(100vw - 32px))' }">
+  <form class="gp-form" id="form-ap" (ngSubmit)="guardar()">
+    <div class="gp-campo gp-completo">
+      <label for="ap-act">Actividad (sin hijos)</label>
+      <p-select inputId="ap-act" name="actividadId" [options]="opcionesHojas()" optionLabel="label" optionValue="value" [(ngModel)]="form.actividadId" [filter]="true" placeholder="Elige una actividad" appendTo="body" [disabled]="!!editando()" />
+      @if (errores()['actividadId']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="ap-prof">Profesional</label>
+      <p-select inputId="ap-prof" name="profesionalId" [options]="opcionesProfesionales()" optionLabel="label" optionValue="value" [(ngModel)]="form.profesionalId" [filter]="true" placeholder="Elige un profesional" appendTo="body" [disabled]="!!editando()" />
+      @if (errores()['profesionalId']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="ap-h">Horas por semana</label>
+      <p-inputnumber inputId="ap-h" name="horasSemana" [(ngModel)]="form.horasSemana" [min]="0.5" [max]="80" [maxFractionDigits]="1" locale="es-CL" suffix=" h" />
+      @if (errores()['horasSemana']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="ap-v">Valor hora (CLP)</label>
+      <p-inputnumber inputId="ap-v" name="valorHora" [(ngModel)]="form.valorHora" mode="currency" currency="CLP" locale="es-CL" [min]="0" [maxFractionDigits]="0" [placeholder]="valorHoraRef() != null ? 'Ficha: ' + (valorHoraRef()! | clp) : ''" />
+      <p class="gp-ayuda">Vacío: se usa el valor hora de la ficha del profesional.</p>
+    </div>
+    <div class="gp-campo">
+      <label for="ap-r">Horas reales trabajadas</label>
+      <p-inputnumber inputId="ap-r" name="horasReales" [(ngModel)]="form.horasReales" [min]="0" [maxFractionDigits]="1" locale="es-CL" suffix=" h" />
+      <p class="gp-ayuda">Costo real = horas reales × valor hora.</p>
+    </div>
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="dialogo.set(false)" />
+      <p-button label="Guardar" icon="pi pi-check" type="submit" form="form-ap" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>

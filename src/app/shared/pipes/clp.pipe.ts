@@ -6,6 +6,8 @@ const formato = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'C
 @Pipe({ name: 'clp' })
 export class ClpPipe implements PipeTransform {
   transform(valor: number | null | undefined): string {
-    return valor == null ? '—' : formato.format(valor);
+    if (valor == null) return '—';
+    // es-CL escribe "$-1.000"; se prefiere el signo delante del símbolo.
+    return valor < 0 ? '-' + formato.format(-valor) : formato.format(valor);
   }
 }

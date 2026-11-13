@@ -1,0 +1,118 @@
+.fecha {
+  flex-basis: 150px;
+}
+
+.recargando {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.bloque {
+  margin-top: var(--gp-space-4);
+}
+
+.cab {
+  margin: 0;
+}
+
+.atraso {
+  margin-left: 6px;
+  font-size: var(--gp-text-xs);
+  font-weight: 700;
+}
+
+.hitos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-space-3);
+    padding: 8px 10px;
+    border: 1px solid var(--gp-line);
+    border-radius: var(--gp-radius-sm);
+  }
+
+  .texto {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    font-size: var(--gp-text-sm);
+  }
+}
+
+.carga {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  li {
+    display: grid;
+    grid-template-columns: minmax(110px, 170px) 1fr 64px;
+    grid-template-areas: 'n p v' '. s s';
+    align-items: center;
+    column-gap: var(--gp-space-3);
+    font-size: var(--gp-text-sm);
+  }
+
+  .nombre {
+    grid-area: n;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pista {
+    grid-area: p;
+    position: relative;
+    height: 12px;
+    background: var(--gp-surface-sunken);
+    border-radius: 2px 4px 4px 2px;
+  }
+
+  .uso {
+    display: block;
+    height: 100%;
+    background: #609496;
+    border-radius: 2px 4px 4px 2px;
+
+    &.sobre {
+      background: var(--gp-danger);
+    }
+  }
+
+  .cien {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    left: 66.67%;
+    width: 2px;
+    background: var(--gp-text);
+  }
+
+  .pico {
+    grid-area: v;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sem {
+    grid-area: s;
+    font-size: var(--gp-text-xs);
+  }
+}
+
+.nota-carga {
+  margin: var(--gp-space-3) 0 0;
+  font-size: var(--gp-text-xs);
+  color: var(--gp-text-muted);
+}

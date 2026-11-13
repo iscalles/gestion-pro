@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -18,6 +18,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
+import { ClpPipe } from '../../../../shared/pipes/clp.pipe';
+import { proyectoPreferido, recordarProyecto } from '../../../../shared/util/contexto-proyecto';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { erroresDeCampos, mensajeDeError } from '../../../../core/api/api-error';
 import { ProyectosService } from '../../../proyectos/data/proyectos.service';
@@ -36,7 +38,7 @@ import { CalendarioLaboral } from '../../ui/calendario-laboral/calendario-labora
 
 @Component({
   selector: 'gp-actividades-lista',
-  imports: [
+  imports: [DecimalPipe, 
     DatePipe,
     RouterLink,
     FormsModule,
@@ -54,6 +56,7 @@ import { CalendarioLaboral } from '../../ui/calendario-laboral/calendario-labora
     ConfirmDialogModule,
     TooltipModule,
     PageHeader,
+    ClpPipe,
     DetalleActividad,
     CalendarioLaboral,
   ],
@@ -86,8 +89,10 @@ export class ActividadesLista {
 
   protected readonly proyectoId = computed(() => {
     const ps = this.proyectos();
-    const pedido = Number(this.proyecto());
-    return ps.some((p) => p.id === pedido) ? pedido : (ps[0]?.id ?? null);
+    for (const candidato of [Number(this.proyecto()) || null, proyectoPreferido()]) {
+      if (candidato != null && ps.some((p) => p.id === candidato)) return candidato;
+    }
+    return ps.find((p) => p.estado === 'EN_EJECUCION')?.id ?? ps[0]?.id ?? null;
   });
   protected readonly proyectoActual = computed(
     () => this.proyectos().find((p) => p.id === this.proyectoId()) ?? null,
@@ -111,6 +116,7 @@ export class ActividadesLista {
 
     effect(() => {
       const id = this.proyectoId();
+      recordarProyecto(id);
       if (id != null) untracked(() => this.cargarPlan(id, true));
     });
   }

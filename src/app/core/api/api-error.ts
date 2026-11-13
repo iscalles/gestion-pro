@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 /** Forma de los errores que devuelve el backend (ver README del backend). */
 export interface ApiError {
@@ -13,7 +14,7 @@ export interface ApiError {
 export function mensajeDeError(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
     if (err.status === 0) {
-      return 'No hay conexión con el servidor. Revisa que el backend esté corriendo en el puerto 8080.';
+      return `No hay conexión con el servidor. Revisa que el backend esté corriendo en ${servidor()}.`;
     }
     const cuerpo = err.error as Partial<ApiError> | null;
     if (cuerpo?.mensaje) {
@@ -32,4 +33,13 @@ export function erroresDeCampos(err: unknown): Record<string, string> {
     return (err.error as Partial<ApiError> | null)?.campos ?? {};
   }
   return {};
+}
+
+/** Host y puerto del backend configurado (localhost:8080 o localhost:8081). */
+function servidor(): string {
+  try {
+    return new URL(environment.apiUrl).host;
+  } catch {
+    return environment.apiUrl;
+  }
 }

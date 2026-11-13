@@ -8,6 +8,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, switchMap, map } from 'rxjs';
@@ -22,6 +23,7 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
+import { proyectoPreferido, recordarProyecto } from '../../../../shared/util/contexto-proyecto';
 import { mensajeDeError } from '../../../../core/api/api-error';
 import { ProyectosService } from '../../../proyectos/data/proyectos.service';
 import { Proyecto } from '../../../proyectos/models/proyecto.model';
@@ -55,6 +57,7 @@ interface Preferencias {
 @Component({
   selector: 'gp-carta-gantt',
   imports: [
+    DecimalPipe,
     RouterLink,
     FormsModule,
     ButtonModule,
@@ -107,8 +110,10 @@ export class CartaGantt {
 
   protected readonly proyectoId = computed(() => {
     const ps = this.proyectos();
-    const pedido = Number(this.proyecto());
-    return ps.some((p) => p.id === pedido) ? pedido : (ps[0]?.id ?? null);
+    for (const candidato of [Number(this.proyecto()) || null, proyectoPreferido()]) {
+      if (candidato != null && ps.some((p) => p.id === candidato)) return candidato;
+    }
+    return ps.find((p) => p.estado === 'EN_EJECUCION')?.id ?? ps[0]?.id ?? null;
   });
   protected readonly proyectoActual = computed(
     () => this.proyectos().find((p) => p.id === this.proyectoId()) ?? null,
@@ -132,6 +137,7 @@ export class CartaGantt {
 
     effect(() => {
       const id = this.proyectoId();
+      recordarProyecto(id);
       if (id != null) untracked(() => this.cargar(id));
     });
 

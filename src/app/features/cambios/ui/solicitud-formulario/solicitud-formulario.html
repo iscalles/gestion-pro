@@ -1,0 +1,110 @@
+<p-dialog
+  [header]="solicitud() ? 'Editar ' + solicitud()!.codigo : 'Nueva solicitud de cambio'"
+  [visible]="visible()"
+  (visibleChange)="!$event && cerrarDialogo()"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: 'min(860px, calc(100vw - 32px))' }"
+>
+  <form class="gp-form" id="form-solicitud" (ngSubmit)="guardar()">
+    <div class="gp-campo gp-completo">
+      <label for="s-tit">Título</label>
+      <input pInputText id="s-tit" name="titulo" [(ngModel)]="f.titulo" maxlength="150" required />
+      @if (errores()['titulo']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="s-sol">Solicitante</label>
+      <input pInputText id="s-sol" name="solicitante" [(ngModel)]="f.solicitante" maxlength="120" required />
+      @if (errores()['solicitante']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="s-fs">Fecha de la solicitud</label>
+      <input pInputText type="date" id="s-fs" name="fechaSolicitud" [(ngModel)]="f.fechaSolicitud" [max]="hoy" />
+    </div>
+    <div class="gp-campo">
+      <label for="s-tipo">Tipo de cambio</label>
+      <p-select inputId="s-tipo" name="tipo" [options]="opTipo" optionLabel="label" optionValue="value" [(ngModel)]="f.tipo" appendTo="body" />
+    </div>
+    <div class="gp-campo">
+      <label for="s-pri">Prioridad</label>
+      <p-select inputId="s-pri" name="prioridad" [options]="opPrioridad" optionLabel="label" optionValue="value" [(ngModel)]="f.prioridad" appendTo="body" />
+    </div>
+    <div class="gp-campo">
+      <label for="s-resp">Responsable</label>
+      <p-select inputId="s-resp" name="responsableId" [options]="usuarios()" optionLabel="label" optionValue="value" [(ngModel)]="f.responsableId" placeholder="Elige un usuario" appendTo="body" />
+      @if (errores()['responsableId']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="s-fc">Fecha comprometida</label>
+      <input pInputText type="date" id="s-fc" name="fechaComprometida" [(ngModel)]="f.fechaComprometida" />
+      @if (errores()['fechaComprometida']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="s-desc">Descripción del cambio</label>
+      <textarea pTextarea id="s-desc" name="descripcion" [(ngModel)]="f.descripcion" rows="3" maxlength="2000"></textarea>
+      @if (errores()['descripcion']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="s-just">Justificación</label>
+      <textarea pTextarea id="s-just" name="justificacion" [(ngModel)]="f.justificacion" rows="2" maxlength="2000"></textarea>
+      @if (errores()['justificacion']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+
+    <fieldset class="gp-completo grupo">
+      <legend>Evaluación de impacto</legend>
+      <div class="gp-form">
+        <div class="gp-campo">
+          <label for="s-ipd">Impacto en plazo (días hábiles)</label>
+          <p-inputnumber inputId="s-ipd" name="impactoPlazoDias" [(ngModel)]="f.impactoPlazoDias" [showButtons]="true" [min]="-365" [max]="365" />
+        </div>
+        <div class="gp-campo">
+          <label for="s-ic">Impacto en costo (CLP)</label>
+          <p-inputnumber inputId="s-ic" name="impactoCosto" [(ngModel)]="f.impactoCosto" mode="currency" currency="CLP" locale="es-CL" [min]="0" [maxFractionDigits]="0" />
+        </div>
+        <div class="gp-campo">
+          <label for="s-ce">Costo estimado de implementar (CLP)</label>
+          <p-inputnumber inputId="s-ce" name="costoEstimado" [(ngModel)]="f.costoEstimado" mode="currency" currency="CLP" locale="es-CL" [min]="0" [maxFractionDigits]="0" />
+        </div>
+        <div class="gp-campo">
+          <label for="s-ir">Impacto en recursos</label>
+          <input pInputText id="s-ir" name="impactoRecursos" [(ngModel)]="f.impactoRecursos" maxlength="300" />
+        </div>
+        <div class="gp-campo gp-completo">
+          <label for="s-ia">Impacto en alcance</label>
+          <input pInputText id="s-ia" name="impactoAlcance" [(ngModel)]="f.impactoAlcance" maxlength="300" />
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="gp-completo grupo">
+      <legend>Riesgo</legend>
+      <div class="gp-form">
+        <div class="gp-campo gp-completo">
+          <label for="s-rie">Descripción del riesgo</label>
+          <textarea pTextarea id="s-rie" name="riesgo" [(ngModel)]="f.riesgo" rows="2" maxlength="1000"></textarea>
+        </div>
+        <div class="gp-campo">
+          <label for="s-prob">Probabilidad</label>
+          <p-select inputId="s-prob" name="probabilidad" [options]="opProbabilidad" optionLabel="label" optionValue="value" [(ngModel)]="f.probabilidad" (ngModelChange)="cambioRiesgo()" [showClear]="true" placeholder="Sin evaluar" appendTo="body" />
+        </div>
+        <div class="gp-campo">
+          <label for="s-imp">Impacto</label>
+          <p-select inputId="s-imp" name="impacto" [options]="opImpacto" optionLabel="label" optionValue="value" [(ngModel)]="f.impacto" (ngModelChange)="cambioRiesgo()" [showClear]="true" placeholder="Sin evaluar" appendTo="body" />
+        </div>
+        <p class="gp-completo gp-ayuda">
+          Nivel resultante: <gp-status-badge [tono]="riesgo().tono">{{ riesgo().etiqueta }}</gp-status-badge>
+          — se exige antes de pasar a la etapa de aprobación.
+        </p>
+      </div>
+    </fieldset>
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="cerrarDialogo()" />
+      <p-button [label]="solicitud() ? 'Guardar cambios' : 'Registrar solicitud'" icon="pi pi-check" type="submit" form="form-solicitud" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>

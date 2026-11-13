@@ -1,0 +1,443 @@
+// Piezas comunes de las pantallas de módulos (recursos, hitos, KPI, cambios, tableros).
+// Globales y con prefijo gp- para no chocar con los estilos encapsulados de cada componente
+// y para no gastar el presupuesto de estilos por componente.
+
+.gp-pagina {
+  padding: var(--gp-space-8);
+  max-width: 1440px;
+
+  @media (max-width: 640px) {
+    padding: var(--gp-space-4);
+  }
+}
+
+// Fila bajo el encabezado: selector de proyecto y filtros
+.gp-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--gp-space-3) var(--gp-space-4);
+  margin-bottom: var(--gp-space-5);
+}
+
+.gp-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 0 1 220px;
+
+  > label,
+  > .gp-etiqueta {
+    font-size: var(--gp-text-sm);
+    font-weight: 500;
+  }
+
+  &.gp-ancho {
+    flex: 1 1 360px;
+  }
+
+  &.gp-proyecto {
+    flex: 0 1 420px;
+  }
+
+  input,
+  textarea,
+  .p-select,
+  .p-multiselect,
+  .p-inputnumber,
+  .p-datepicker {
+    width: 100%;
+  }
+
+  .gp-ayuda {
+    margin: 0;
+    font-size: var(--gp-text-xs);
+    color: var(--gp-text-muted);
+  }
+
+  .gp-error-campo {
+    margin: 0;
+    font-size: var(--gp-text-xs);
+    color: var(--gp-danger);
+  }
+}
+
+// Formularios en diálogos: rejilla de 2 columnas que colapsa
+.gp-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gp-space-4);
+
+  .gp-campo {
+    flex: none;
+  }
+
+  .gp-completo {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gp-pie-dialogo {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gp-space-2);
+}
+
+// Cifras clave (stat tiles)
+.gp-cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--gp-space-3);
+  margin: 0 0 var(--gp-space-5);
+}
+
+.gp-cifra {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--gp-space-3) var(--gp-space-4);
+  background: var(--gp-surface);
+  border: 1px solid var(--gp-line);
+  border-radius: var(--gp-radius-md);
+
+  dt,
+  .gp-cifra-titulo {
+    font-size: var(--gp-text-sm);
+    color: var(--gp-text-muted);
+  }
+
+  dd,
+  .gp-cifra-valor {
+    margin: 0;
+    font-size: var(--gp-text-xl);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .gp-cifra-nota {
+    font-size: var(--gp-text-xs);
+    color: var(--gp-text-muted);
+  }
+}
+
+// Secciones dentro de un panel
+.gp-seccion {
+  padding: var(--gp-space-4);
+
+  & + & {
+    border-top: 1px solid var(--gp-line);
+  }
+}
+
+.gp-seccion-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gp-space-2) var(--gp-space-4);
+  margin-bottom: var(--gp-space-3);
+
+  h2,
+  h3 {
+    font-size: var(--gp-text-lg);
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--gp-text-muted);
+    font-size: var(--gp-text-sm);
+  }
+}
+
+.gp-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: var(--gp-space-4);
+  margin-bottom: var(--gp-space-4);
+}
+
+// Tablas PrimeNG con el tono de la app
+.gp-tabla {
+  .p-datatable-table-container {
+    overflow-x: auto;
+  }
+
+  .p-datatable-thead > tr > th {
+    background: var(--gp-canvas);
+    color: var(--gp-text-muted);
+    font-size: var(--gp-text-sm);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .p-datatable-tbody > tr > td {
+    border-color: var(--gp-line);
+    vertical-align: middle;
+  }
+
+  .p-datatable-tbody > tr.gp-fila-grupo > td {
+    background: var(--gp-surface-sunken);
+    font-weight: 700;
+  }
+
+  .p-datatable-tbody > tr.gp-fila-sel > td {
+    background: var(--gp-accent-soft);
+  }
+
+  .p-datatable-tbody > tr.gp-clic {
+    cursor: pointer;
+  }
+}
+
+.gp-acciones-fila {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.gp-tenue {
+  color: var(--gp-text-muted);
+}
+
+.gp-fecha {
+  white-space: nowrap;
+  color: var(--gp-text-muted);
+}
+
+.gp-codigo {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--gp-text-muted);
+}
+
+.gp-negativo {
+  color: var(--gp-danger);
+}
+
+.gp-positivo {
+  color: var(--gp-ok);
+}
+
+// Estados de carga, error y vacío
+.gp-estado-carga {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gp-space-3);
+  padding: var(--gp-space-5) var(--gp-space-4);
+
+  p-skeleton {
+    width: 100%;
+  }
+}
+
+.gp-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gp-space-3);
+  padding: var(--gp-space-8) var(--gp-space-4);
+  text-align: center;
+  color: var(--gp-text-muted);
+
+  > i {
+    font-size: 1.75rem;
+    color: var(--gp-data);
+  }
+
+  h2 {
+    font-size: var(--gp-text-lg);
+    color: var(--gp-text);
+  }
+
+  p {
+    margin: 0;
+    max-width: 56ch;
+  }
+}
+
+.gp-nota {
+  margin: 0;
+  padding: var(--gp-space-3) var(--gp-space-4);
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
+}
+
+// Barras de avance compactas
+.gp-avance {
+  display: flex;
+  align-items: center;
+  gap: var(--gp-space-2);
+  min-width: 120px;
+
+  p-progressbar {
+    flex: 1;
+  }
+
+  .p-progressbar {
+    height: 6px;
+  }
+
+  span {
+    width: 44px;
+    text-align: right;
+    font-size: var(--gp-text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// Pestañas de módulo
+.gp-pestanas {
+  .p-tablist {
+    background: transparent;
+  }
+
+  .p-tabpanels {
+    padding: 0;
+    background: transparent;
+  }
+
+  .p-tab {
+    font-size: var(--gp-text-md);
+  }
+}
+
+// Listas de definiciones en fichas de detalle
+.gp-ficha {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--gp-space-3) var(--gp-space-5);
+  margin: 0;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  dt {
+    font-size: var(--gp-text-sm);
+    color: var(--gp-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.gp-texto-largo {
+  margin: 0;
+  white-space: pre-line;
+  max-width: 80ch;
+}
+
+// Chips de selección simples (variables de fórmula, filtros)
+.gp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gp-space-1) var(--gp-space-2);
+}
+
+.gp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--gp-line-strong);
+  border-radius: 999px;
+  background: var(--gp-surface);
+  color: var(--gp-text);
+  font: inherit;
+  font-size: var(--gp-text-xs);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--gp-accent);
+    color: var(--gp-accent);
+  }
+}
+
+// Leyenda de gráficos
+.gp-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gp-space-1) var(--gp-space-4);
+  margin: 0 0 var(--gp-space-2);
+  padding: 0;
+  list-style: none;
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.gp-muestra {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+
+  &.gp-linea {
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  &.gp-discontinua {
+    height: 0;
+    border-top: 3px dashed currentColor;
+    background: transparent !important;
+  }
+}
+
+// Vista de tabla de un gráfico
+.gp-datos-grafico {
+  margin-top: var(--gp-space-2);
+  font-size: var(--gp-text-sm);
+  max-width: 100%;
+  overflow-x: auto;
+
+  summary {
+    cursor: pointer;
+    color: var(--gp-accent);
+    width: fit-content;
+  }
+
+  table {
+    width: 100%;
+    margin-top: var(--gp-space-2);
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--gp-line);
+    text-align: left;
+  }
+
+  th {
+    color: var(--gp-text-muted);
+    font-weight: 500;
+  }
+
+  td.num,
+  th.num {
+    text-align: right;
+  }
+}
+
+.gp-msg {
+  margin-top: var(--gp-space-3);
+}

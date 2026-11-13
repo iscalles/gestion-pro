@@ -1,0 +1,266 @@
+<div class="gp-pagina">
+  <gp-page-header titulo="Seguimiento del proyecto" descripcion="Avance, costos, KPI, hitos, carga del equipo y alertas, con filtros por etapa, fechas y responsable.">
+    @if (ctx.proyectoId() != null) {
+      <p-button label="Ver Gantt" icon="pi pi-chart-bar" [outlined]="true" routerLink="/gantt" [queryParams]="{ proyecto: ctx.proyectoId() }" />
+    }
+  </gp-page-header>
+
+  @if (ctx.cargando()) {
+    <div class="panel gp-estado-carga" aria-busy="true">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="1.75rem" />
+      }
+    </div>
+  } @else if (ctx.proyectos().length === 0) {
+    <div class="panel gp-vacio">
+      @if (ctx.error(); as e) {
+        <p-message severity="error" [text]="e" />
+      } @else {
+        <p>Todavía no tienes proyectos asignados.</p>
+      }
+    </div>
+  } @else {
+    <form class="gp-barra" (ngSubmit)="cargar()">
+      <gp-selector-proyecto [ctx]="ctx" />
+      <div class="gp-campo">
+        <label for="t-etapa">Etapa</label>
+        <p-select inputId="t-etapa" name="etapa" [options]="opEtapa()" optionLabel="label" optionValue="value" [(ngModel)]="filtro.etapaId" (ngModelChange)="cargar()" />
+      </div>
+      <div class="gp-campo">
+        <label for="t-resp">Responsable</label>
+        <p-select inputId="t-resp" name="responsable" [options]="opResponsable()" optionLabel="label" optionValue="value" [(ngModel)]="filtro.responsableId" (ngModelChange)="cargar()" [filter]="true" />
+      </div>
+      <div class="gp-campo fecha">
+        <label for="t-desde">Desde</label>
+        <input pInputText type="date" id="t-desde" name="desde" [(ngModel)]="filtro.desde" />
+      </div>
+      <div class="gp-campo fecha">
+        <label for="t-hasta">Hasta</label>
+        <input pInputText type="date" id="t-hasta" name="hasta" [(ngModel)]="filtro.hasta" />
+      </div>
+      <p-button label="Aplicar fechas" type="submit" icon="pi pi-filter" [outlined]="true" />
+      @if (hayFiltro()) {
+        <p-button label="Quitar filtros" [text]="true" (onClick)="limpiar()" />
+      }
+    </form>
+
+    @if (error(); as e) {
+      <div class="panel gp-estado-carga">
+        <p-message severity="error" [text]="e" />
+        <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar()" />
+      </div>
+    } @else if (!datos()) {
+      <div class="panel gp-estado-carga" aria-busy="true">
+        <p-skeleton height="6rem" />
+        <p-skeleton height="16rem" />
+      </div>
+    } @else {
+      @let d = datos()!;
+      @let r = d.resumen;
+      <div [class.recargando]="cargando()">
+        <dl class="gp-cifras">
+          <div class="gp-cifra">
+            <dt>Avance real</dt>
+            <dd>{{ fmtPct(r.avanceReal) }}</dd>
+            <span class="gp-cifra-nota" [class.gp-negativo]="r.avanceReal < r.avancePlanificado - 0.5">
+              Planificado a hoy {{ fmtPct(r.avancePlanificado) }}
+            </span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Costo real</dt>
+            <dd>{{ r.costoReal | clp }}</dd>
+            <span class="gp-cifra-nota">Plan {{ r.costoPlan | clp }} · presupuesto {{ r.presupuesto | clp }}</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>SPI · CPI</dt>
+            <dd>
+              <span [class.gp-negativo]="r.spi != null && r.spi < 0.95">{{ r.spi == null ? '—' : (r.spi | number: '1.2-2') }}</span>
+              ·
+              <span [class.gp-negativo]="r.cpi != null && r.cpi < 0.95">{{ r.cpi == null ? '—' : (r.cpi | number: '1.2-2') }}</span>
+            </dd>
+            <span class="gp-cifra-nota">EV {{ r.valorGanado | clp }} · PV {{ r.valorPlanificado | clp }}</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Actividades</dt>
+            <dd>{{ r.terminadas }} <span class="gp-tenue">de {{ r.actividades }}</span></dd>
+            <span class="gp-cifra-nota" [class.gp-negativo]="r.atrasadas > 0">{{ r.enCurso }} en curso · {{ r.atrasadas }} {{ r.atrasadas === 1 ? 'atrasada' : 'atrasadas' }}</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Hitos cumplidos</dt>
+            <dd>{{ r.hitosCumplidos }} <span class="gp-tenue">de {{ r.hitos }}</span></dd>
+            <span class="gp-cifra-nota" [class.gp-negativo]="r.hitosAtrasados + r.hitosEnRiesgo > 0">{{ r.hitosAtrasados }} atrasados · {{ r.hitosEnRiesgo }} en riesgo</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Alertas abiertas</dt>
+            <dd [class.gp-negativo]="r.alertasAltas > 0">{{ r.alertasAbiertas }}</dd>
+            <span class="gp-cifra-nota">{{ r.alertasAltas }} de severidad alta · {{ r.sobreasignaciones }} sobreasignaciones</span>
+          </div>
+        </dl>
+
+        <div class="gp-rejilla">
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera">
+              <div>
+                <h2>Curva S de avance</h2>
+                <p>Avance acumulado planificado por semana y avance real reconstruido desde las fechas reales.</p>
+              </div>
+            </div>
+            @if (curva(); as c) {
+              <gp-grafico-lineas titulo="Curva S: avance planificado y real" [etiquetas]="c.etiquetas" [series]="c.series" [formato]="fmtPct" [formatoEje]="fmtEjePct" [maximo]="100" [marca]="c.marca" nombreX="Semana" />
+            } @else {
+              <p class="gp-tenue">No hay semanas suficientes en el rango elegido.</p>
+            }
+          </section>
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera">
+              <div>
+                <h2>Avance por etapa</h2>
+                <p>Porcentaje real frente al que debería llevar hoy según el plan.</p>
+              </div>
+            </div>
+            @if (avanceEtapas(); as g) {
+              <gp-grafico-barras titulo="Avance planificado y real por etapa" nombreCategoria="Etapa" [categorias]="g.categorias" [series]="g.series" [formato]="fmtPct" [formatoEje]="fmtEjePct" />
+            }
+          </section>
+        </div>
+
+        <section class="panel gp-seccion bloque">
+          <div class="gp-seccion-cabecera">
+            <div>
+              <h2>Indicadores</h2>
+              <p>{{ r.kpiVerdes }} en meta · {{ r.kpiAmbar }} en alerta · {{ r.kpiRojos }} fuera de meta</p>
+            </div>
+            <p-button label="Ver indicadores" [text]="true" icon="pi pi-arrow-right" iconPos="right" routerLink="/kpi" [queryParams]="{ proyecto: ctx.proyectoId() }" />
+          </div>
+          <gp-kpi-mosaico [kpis]="d.kpis" [proyectoId]="ctx.proyectoId()" />
+        </section>
+
+        <div class="gp-rejilla bloque">
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera">
+              <div>
+                <h2>Costo por etapa</h2>
+                <p>Planificado y real acumulado.</p>
+              </div>
+            </div>
+            @if (costoEtapas(); as g) {
+              <gp-grafico-barras titulo="Costo planificado y real por etapa" nombreCategoria="Etapa" [categorias]="g.categorias" [series]="g.series" [formato]="fmtPesos" [formatoEje]="fmtPesosEje" />
+            }
+          </section>
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera">
+              <h2>Hitos</h2>
+              <p-button label="Ver hitos" [text]="true" icon="pi pi-arrow-right" iconPos="right" routerLink="/hitos" [queryParams]="{ proyecto: ctx.proyectoId() }" />
+            </div>
+            <ul class="hitos">
+              @for (h of d.hitos; track h.id) {
+                <li>
+                  <div class="texto">
+                    <span><span class="gp-codigo">{{ h.codigo }}</span> {{ h.descripcion }}</span>
+                    <span class="gp-tenue">
+                      Comprometido {{ h.fechaComprometida | date: 'dd-MM-yyyy' }}
+                      @if (h.fechaReal) {
+                        · real {{ h.fechaReal | date: 'dd-MM-yyyy' }}
+                      } @else if (h.fechaPrevista) {
+                        · previsto <span [class.gp-negativo]="h.enRiesgo">{{ h.fechaPrevista | date: 'dd-MM-yyyy' }}</span>
+                      }
+                      · criterios {{ h.criteriosCumplidos }}/{{ h.criteriosTotal }}
+                    </span>
+                  </div>
+                  <gp-status-badge [tono]="h.enRiesgo && h.estado === 'PENDIENTE' ? 'warn' : estadoHito(h.estado).tono">
+                    {{ h.enRiesgo && h.estado === 'PENDIENTE' ? 'En riesgo' : estadoHito(h.estado).etiqueta }}
+                  </gp-status-badge>
+                </li>
+              } @empty {
+                <li class="gp-tenue">Sin hitos en el filtro.</li>
+              }
+            </ul>
+          </section>
+        </div>
+
+        <section class="panel bloque">
+          <div class="gp-seccion gp-seccion-cabecera cab">
+            <div>
+              <h2>Actividades por atender</h2>
+              <p>Atrasadas primero; las terminadas no se muestran.</p>
+            </div>
+          </div>
+          <p-table [value]="actividadesFoco()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '900px' }" [rows]="10" [paginator]="actividadesFoco().length > 10">
+            <ng-template #header>
+              <tr>
+                <th>Actividad</th>
+                <th>Responsable</th>
+                <th>Plan</th>
+                <th>Avance</th>
+                <th>Estado</th>
+                <th class="num">Costo plan / real</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-a>
+              <tr>
+                <td><span class="gp-codigo">{{ a.codigoEdt }}</span> {{ a.nombre }}<br /><span class="gp-tenue">{{ a.etapa }}</span></td>
+                <td>{{ a.responsable ?? '—' }}</td>
+                <td class="gp-fecha">{{ a.inicio | date: 'dd-MM' }} → {{ a.termino | date: 'dd-MM-yyyy' }}</td>
+                <td>
+                  <div class="gp-avance">
+                    <p-progressbar [value]="a.avance" [showValue]="false" [attr.aria-label]="'Avance ' + a.avance + '%'" />
+                    <span>{{ a.avance | number: '1.0-0' }} %</span>
+                  </div>
+                </td>
+                <td>
+                  <gp-status-badge [tono]="estadoActividad(a.estado).tono">{{ estadoActividad(a.estado).etiqueta }}</gp-status-badge>
+                  @if (a.diasAtraso > 0) {
+                    <span class="gp-negativo atraso">{{ a.diasAtraso }} d</span>
+                  }
+                </td>
+                <td class="num">{{ a.costoPlan | clp }}<br /><span class="gp-tenue">{{ a.costoReal | clp }}</span></td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr><td colspan="6" class="gp-vacio">Todas las actividades del filtro están terminadas.</td></tr>
+            </ng-template>
+          </p-table>
+        </section>
+
+        <div class="gp-rejilla bloque">
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera">
+              <div>
+                <h2>Carga del equipo</h2>
+                <p>Uso máximo semanal en todos sus proyectos.</p>
+              </div>
+              <p-button label="Ver carga semanal" [text]="true" icon="pi pi-arrow-right" iconPos="right" routerLink="/recursos" [queryParams]="{ proyecto: ctx.proyectoId() }" />
+            </div>
+            <ul class="carga">
+              @for (p of cargaResumen(); track p.id) {
+                <li>
+                  <span class="nombre">{{ p.nombre }}</span>
+                  <div class="pista" role="img" [attr.aria-label]="p.nombre + ': máximo ' + (p.pico | number: '1.0-0') + ' %'">
+                    <span class="uso" [class.sobre]="p.pico > 100" [style.width.%]="p.pico > 150 ? 100 : (p.pico / 150) * 100"></span>
+                    <span class="cien" aria-hidden="true"></span>
+                  </div>
+                  <span class="pico" [class.gp-negativo]="p.pico > 100">
+                    @if (p.pico > 100) {
+                      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                    }
+                    {{ p.pico | number: '1.0-0' }} %
+                  </span>
+                  <span class="gp-tenue sem">{{ p.sobre ? p.sobre + ' sem. sobre 100 %' : '' }}</span>
+                </li>
+              } @empty {
+                <li class="gp-tenue">Sin profesionales asignados.</li>
+              }
+            </ul>
+            <p class="gp-ayuda nota-carga">La línea vertical marca el 100 % de las horas disponibles.</p>
+          </section>
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera">
+              <h2>Alertas</h2>
+            </div>
+            <gp-lista-alertas [alertas]="d.alertas" />
+          </section>
+        </div>
+      </div>
+    }
+  }
+</div>

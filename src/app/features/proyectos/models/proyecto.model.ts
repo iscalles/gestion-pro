@@ -15,6 +15,14 @@ export interface Proyecto {
   estado: EstadoProyecto;
   /** Calculado por el backend desde las actividades hoja. */
   avance: number;
+  fechaInicioReal: string | null;
+  fechaTerminoReal: string | null;
+  /** Término que resulta de la programación de actividades. */
+  terminoPrevisto: string | null;
+  costoPlan: number;
+  costoReal: number;
+  miembroIds: number[];
+  solicitudesAbiertas: number;
 }
 
 /** Cuerpo de POST y PUT /api/proyectos (ProyectoRequest en el backend). */
@@ -28,6 +36,7 @@ export interface ProyectoRequest {
   fechaTermino: string;
   presupuesto: number;
   estado?: EstadoProyecto;
+  miembroIds?: number[];
 }
 
 export const ESTADO_PROYECTO: Record<EstadoProyecto, { etiqueta: string; tono: 'neutral' | 'accent' | 'warn' | 'ok' }> = {

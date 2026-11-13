@@ -145,3 +145,31 @@
     width: 100%;
   }
 }
+
+.sub {
+  display: block;
+  font-size: var(--gp-text-xs);
+}
+
+.sub-num {
+  font-size: var(--gp-text-xs);
+  color: var(--gp-text-muted);
+}
+
+.tarde {
+  color: var(--gp-warn);
+  font-weight: 500;
+}
+
+.acciones {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.texto-cierre {
+  margin: 0 0 var(--gp-space-4);
+}
+
+:host ::ng-deep .msg-form {
+  margin-top: var(--gp-space-3);
+}

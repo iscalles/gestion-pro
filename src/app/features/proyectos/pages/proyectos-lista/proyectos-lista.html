@@ -1,10 +1,13 @@
+<p-toast position="bottom-right" />
+<p-confirmdialog [style]="{ width: 'min(460px, calc(100vw - 32px))' }" />
+
 <div class="pagina">
   <gp-page-header
     titulo="Proyectos"
-    descripcion="Crea, edita y cierra proyectos. El avance se calcula desde las actividades."
+    descripcion="Crea, edita y cierra proyectos. El avance y los costos se calculan desde las actividades y sus recursos."
   >
     @if (esAdmin()) {
-      <p-button label="Nuevo proyecto" icon="pi pi-plus" />
+      <p-button label="Nuevo proyecto" icon="pi pi-plus" (onClick)="abrir(null)" />
     }
   </gp-page-header>
 
@@ -16,6 +19,14 @@
     <div>
       <dt>Presupuesto en ejecución</dt>
       <dd class="num">{{ resumen().presupuesto | clp }}</dd>
+    </div>
+    <div>
+      <dt>Costo planificado en ejecución</dt>
+      <dd class="num">{{ resumen().costoPlan | clp }}</dd>
+    </div>
+    <div>
+      <dt>Solicitudes de cambio abiertas</dt>
+      <dd>{{ resumen().solicitudes }}</dd>
     </div>
   </dl>
 
@@ -61,49 +72,200 @@
         }
       </div>
     } @else {
-    <p-table [value]="filtrados()" [tableStyle]="{ 'min-width': '880px' }" dataKey="id">
-      <ng-template #header>
-        <tr>
-          <th>Código</th>
-          <th>Proyecto</th>
-          <th>Responsable</th>
-          <th>Inicio</th>
-          <th>Término</th>
-          <th class="num">Presupuesto</th>
-          <th>Estado</th>
-          <th class="col-avance">Avance</th>
-        </tr>
-      </ng-template>
-      <ng-template #body let-p>
-        <tr>
-          <td class="codigo">{{ p.codigo }}</td>
-          <td><a class="nombre" routerLink="/actividades" [queryParams]="{ proyecto: p.id }">{{ p.nombre }}</a></td>
-          <td>{{ p.responsable }}</td>
-          <td class="fecha">{{ p.fechaInicio | date: 'dd-MM-yyyy' }}</td>
-          <td class="fecha">{{ p.fechaTermino | date: 'dd-MM-yyyy' }}</td>
-          <td class="num">{{ p.presupuesto | clp }}</td>
-          <td><gp-status-badge [tono]="est(p.estado).tono">{{ est(p.estado).etiqueta }}</gp-status-badge></td>
-          <td>
-            <div class="avance">
-              <p-progressbar [value]="p.avance" [showValue]="false" [attr.aria-label]="'Avance ' + p.avance + '%'" />
-              <span class="num">{{ p.avance }}%</span>
-            </div>
-          </td>
-        </tr>
-      </ng-template>
-      <ng-template #emptymessage>
-        <tr>
-          <td colspan="8" class="vacio">
-            @if (hayProyectos()) {
-              Ningún proyecto coincide con la búsqueda.
-              <p-button label="Limpiar filtros" [text]="true" (onClick)="limpiarFiltros()" />
-            } @else {
-              Todavía no tienes proyectos asignados.
-            }
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
+      <p-table [value]="filtrados()" [tableStyle]="{ 'min-width': '1080px' }" dataKey="id">
+        <ng-template #header>
+          <tr>
+            <th>Código</th>
+            <th>Proyecto</th>
+            <th>Responsable</th>
+            <th>Plan</th>
+            <th>Término previsto</th>
+            <th class="num">Presupuesto</th>
+            <th class="num">Costo plan / real</th>
+            <th>Estado</th>
+            <th class="col-avance">Avance</th>
+            <th><span class="sr-only">Acciones</span></th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-p>
+          <tr>
+            <td class="codigo">{{ p.codigo }}</td>
+            <td>
+              <a class="nombre" routerLink="/actividades" [queryParams]="{ proyecto: p.id }" (click)="recordar(p)">{{ p.nombre }}</a>
+              @if (p.solicitudesAbiertas > 0) {
+                <a class="sub" routerLink="/cambios" [queryParams]="{ proyecto: p.id }" (click)="recordar(p)">
+                  {{ p.solicitudesAbiertas }} {{ p.solicitudesAbiertas === 1 ? 'solicitud abierta' : 'solicitudes abiertas' }}
+                </a>
+              }
+            </td>
+            <td>{{ p.responsable }}</td>
+            <td class="fecha">{{ p.fechaInicio | date: 'dd-MM-yyyy' }} → {{ p.fechaTermino | date: 'dd-MM-yyyy' }}</td>
+            <td class="fecha">
+              @if (p.estado === 'TERMINADO' && p.fechaTerminoReal) {
+                Real {{ p.fechaTerminoReal | date: 'dd-MM-yyyy' }}
+              } @else if (p.terminoPrevisto) {
+                <span [class.tarde]="atrasado(p)">
+                  @if (atrasado(p)) {
+                    <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                  }
+                  {{ p.terminoPrevisto | date: 'dd-MM-yyyy' }}
+                </span>
+                @if (atrasado(p)) {
+                  <span class="sr-only">(después del término comprometido)</span>
+                }
+              } @else {
+                —
+              }
+            </td>
+            <td class="num">{{ p.presupuesto | clp }}</td>
+            <td class="num">
+              {{ p.costoPlan | clp }}<br />
+              <span class="sub-num">{{ p.costoReal | clp }}</span>
+            </td>
+            <td><gp-status-badge [tono]="est(p.estado).tono">{{ est(p.estado).etiqueta }}</gp-status-badge></td>
+            <td>
+              <div class="avance">
+                <p-progressbar [value]="p.avance" [showValue]="false" [attr.aria-label]="'Avance ' + p.avance + '%'" />
+                <span class="num">{{ p.avance | number: '1.0-1' }}%</span>
+              </div>
+            </td>
+            <td class="acciones">
+              <p-button
+                icon="pi pi-th-large"
+                [text]="true"
+                size="small"
+                routerLink="/tableros/proyecto"
+                [queryParams]="{ proyecto: p.id }"
+                (onClick)="recordar(p)"
+                pTooltip="Tablero del proyecto"
+                [ariaLabel]="'Tablero de ' + p.nombre"
+              />
+              @if (esAdmin()) {
+                <p-menu #menu [model]="menuDe(p)" [popup]="true" appendTo="body" />
+                <p-button
+                  icon="pi pi-ellipsis-v"
+                  [text]="true"
+                  size="small"
+                  (onClick)="menu.toggle($event)"
+                  [ariaLabel]="'Acciones de ' + p.nombre"
+                />
+              }
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="10" class="vacio">
+              @if (hayProyectos()) {
+                Ningún proyecto coincide con la búsqueda.
+                <p-button label="Limpiar filtros" [text]="true" (onClick)="limpiarFiltros()" />
+              } @else {
+                Todavía no tienes proyectos asignados.
+              }
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
     }
   </section>
 </div>
+
+<p-dialog
+  [header]="editando() ? 'Editar ' + editando()!.codigo : 'Nuevo proyecto'"
+  [visible]="dialogo()"
+  (visibleChange)="dialogo.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(720px, calc(100vw - 32px))' }"
+  [draggable]="false"
+>
+  <form class="gp-form" (ngSubmit)="guardar()" id="form-proyecto">
+    <div class="gp-campo">
+      <label for="p-codigo">Código</label>
+      <input pInputText id="p-codigo" name="codigo" [(ngModel)]="form.codigo" maxlength="20" required placeholder="PRY-2026-05" />
+      @if (errores()['codigo']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="p-resp">Responsable</label>
+      <p-select inputId="p-resp" name="responsableId" [options]="opcionesUsuarios()" optionLabel="label" optionValue="value" [(ngModel)]="form.responsableId" placeholder="Elige un responsable" appendTo="body" />
+      @if (errores()['responsableId']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="p-nombre">Nombre</label>
+      <input pInputText id="p-nombre" name="nombre" [(ngModel)]="form.nombre" maxlength="150" required />
+      @if (errores()['nombre']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="p-desc">Descripción</label>
+      <textarea pTextarea id="p-desc" name="descripcion" [(ngModel)]="form.descripcion" rows="3" maxlength="2000"></textarea>
+    </div>
+    <div class="gp-campo">
+      <label for="p-ini">Inicio planificado</label>
+      <input pInputText type="date" id="p-ini" name="fechaInicio" [(ngModel)]="form.fechaInicio" required />
+      @if (errores()['fechaInicio']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="p-fin">Término comprometido</label>
+      <input pInputText type="date" id="p-fin" name="fechaTermino" [(ngModel)]="form.fechaTermino" required />
+      @if (errores()['fechaTermino'] || errores()['fechasValidas']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="p-pres">Presupuesto (CLP)</label>
+      <p-inputnumber inputId="p-pres" name="presupuesto" [(ngModel)]="form.presupuesto" mode="currency" currency="CLP" locale="es-CL" [min]="0" [maxFractionDigits]="0" />
+      @if (errores()['presupuesto']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="p-cal">Calendario laboral</label>
+      <p-select inputId="p-cal" name="calendarioId" [options]="calendarios()" optionLabel="nombre" optionValue="id" [(ngModel)]="form.calendarioId" appendTo="body" />
+    </div>
+    @if (editando() && editando()!.estado !== 'TERMINADO') {
+      <div class="gp-campo">
+        <label for="p-est">Estado</label>
+        <p-select inputId="p-est" name="estado" [options]="estadosEditables" optionLabel="label" optionValue="value" [(ngModel)]="form.estado" appendTo="body" />
+        <p class="gp-ayuda">Para terminarlo usa «Cerrar proyecto».</p>
+      </div>
+    }
+    <div class="gp-campo" [class.gp-completo]="!editando()">
+      <label for="p-miembros">Equipo (usuarios de proyecto)</label>
+      <p-multiselect inputId="p-miembros" name="miembroIds" [options]="opcionesMiembros()" optionLabel="label" optionValue="value" [(ngModel)]="form.miembroIds" placeholder="Sin miembros" display="chip" appendTo="body" />
+      <p class="gp-ayuda">Ven el proyecto y editan su planificación, además del responsable.</p>
+    </div>
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="msg-form" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="dialogo.set(false)" />
+      <p-button [label]="editando() ? 'Guardar cambios' : 'Crear proyecto'" icon="pi pi-check" type="submit" form="form-proyecto" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  header="Cerrar proyecto"
+  [visible]="cierre() !== null"
+  (visibleChange)="!$event && cierre.set(null)"
+  [modal]="true"
+  [style]="{ width: 'min(480px, calc(100vw - 32px))' }"
+  [draggable]="false"
+>
+  @if (cierre(); as p) {
+    <p class="texto-cierre">
+      <strong>{{ p.codigo }} · {{ p.nombre }}</strong> pasará a <em>Terminado</em>. Se exige que todas las actividades
+      estén al 100 % y que no queden solicitudes de cambio sin cerrar.
+    </p>
+    <div class="gp-campo">
+      <label for="c-fecha">Término real</label>
+      <input pInputText type="date" id="c-fecha" [(ngModel)]="fechaCierre" [max]="fechaCierre" />
+    </div>
+    @if (errorCierre(); as e) {
+      <p-message severity="error" [text]="e" styleClass="msg-form" />
+    }
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="cierre.set(null)" />
+      <p-button label="Cerrar proyecto" icon="pi pi-check-square" (onClick)="cerrar()" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>

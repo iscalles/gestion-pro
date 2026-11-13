@@ -26,7 +26,7 @@ export const MENU: GrupoMenu[] = [
     items: [
       { etiqueta: 'Recursos y costos', ruta: '/recursos', icono: 'pi pi-users' },
       { etiqueta: 'Hitos', ruta: '/hitos', icono: 'pi pi-flag' },
-      { etiqueta: 'Indicadores', ruta: '/kpi', icono: 'pi pi-gauge', roles: ['ADMINISTRADOR'] },
+      { etiqueta: 'Indicadores', ruta: '/kpi', icono: 'pi pi-gauge' },
     ],
   },
   {

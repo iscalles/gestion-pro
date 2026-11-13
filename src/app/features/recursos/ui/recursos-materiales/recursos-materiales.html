@@ -1,0 +1,175 @@
+<section class="gp-seccion">
+  <div class="gp-seccion-cabecera">
+    <div>
+      <h2>Recursos del proyecto</h2>
+      <p>Costo total = cantidad × costo unitario × período (meses de licencia o arriendo; 1 si no aplica).</p>
+    </div>
+    <p-button label="Agregar recurso" icon="pi pi-plus" (onClick)="abrirRecurso(null)" />
+  </div>
+  <p-table [value]="costos().recursos" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '980px' }" dataKey="id">
+    <ng-template #header>
+      <tr>
+        <th>Tipo</th>
+        <th>Recurso</th>
+        <th class="num">Cantidad</th>
+        <th class="num">Costo unitario</th>
+        <th class="num">Período</th>
+        <th class="num">Costo total</th>
+        <th class="num">Asignado</th>
+        <th class="num">Disponible</th>
+        <th><span class="sr-only">Acciones</span></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-r>
+      <tr>
+        <td>{{ tipoEtiqueta[$any(r.tipo)] }}</td>
+        <td>{{ r.descripcion }}@if (r.detalle) {<br /><span class="gp-tenue">{{ r.detalle }}</span>}</td>
+        <td class="num">{{ r.cantidad | number: '1.0-2' }} {{ r.unidad }}</td>
+        <td class="num">{{ r.costoUnitario | clp }}</td>
+        <td class="num">{{ r.periodo }}</td>
+        <td class="num">{{ r.costoTotal | clp }}</td>
+        <td class="num">{{ r.asignado | number: '1.0-2' }}</td>
+        <td class="num" [class.gp-negativo]="r.disponible < 0">{{ r.disponible | number: '1.0-2' }}</td>
+        <td>
+          <div class="gp-acciones-fila">
+            <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar ' + r.descripcion" (onClick)="abrirRecurso(r)" />
+            <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" [ariaLabel]="'Eliminar ' + r.descripcion" (onClick)="eliminarRecurso(r)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr><td colspan="9" class="gp-vacio">Sin recursos materiales registrados.</td></tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<section class="gp-seccion">
+  <div class="gp-seccion-cabecera">
+    <div>
+      <h2>Uso de recursos en actividades</h2>
+      <p>Lo asignado no puede superar la cantidad del recurso.</p>
+    </div>
+    <p-button label="Asignar recurso" icon="pi pi-plus" [outlined]="true" (onClick)="abrirAsignacion(null)" [disabled]="costos().recursos.length === 0" />
+  </div>
+  <p-table [value]="costos().asignacionesRecurso" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '860px' }" dataKey="id">
+    <ng-template #header>
+      <tr>
+        <th>Actividad</th>
+        <th>Recurso</th>
+        <th class="num">Cantidad</th>
+        <th class="num">Período</th>
+        <th class="num">Costo plan</th>
+        <th class="num">Costo real</th>
+        <th><span class="sr-only">Acciones</span></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-a>
+      <tr>
+        <td>{{ a.actividad }}</td>
+        <td>{{ a.recurso }} <span class="gp-tenue">· {{ tipoEtiqueta[$any(a.tipo)] }}</span></td>
+        <td class="num">{{ a.cantidad | number: '1.0-2' }} {{ a.unidad }}</td>
+        <td class="num">{{ a.periodo }}</td>
+        <td class="num">{{ a.costoPlan | clp }}</td>
+        <td class="num" [class.gp-negativo]="a.costoReal > a.costoPlan">{{ a.costoReal | clp }}</td>
+        <td>
+          <div class="gp-acciones-fila">
+            <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar uso de ' + a.recurso" (onClick)="abrirAsignacion(a)" />
+            <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" [ariaLabel]="'Quitar ' + a.recurso" (onClick)="eliminarAsignacion(a)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr><td colspan="7" class="gp-vacio">Ningún recurso asignado a actividades.</td></tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<p-dialog [header]="recursoEditando() ? 'Editar recurso' : 'Nuevo recurso'" [visible]="dlgRecurso()" (visibleChange)="dlgRecurso.set($event)" [modal]="true" [draggable]="false" [style]="{ width: 'min(620px, calc(100vw - 32px))' }">
+  <form class="gp-form" id="form-rec" (ngSubmit)="guardarRecurso()">
+    <div class="gp-campo">
+      <label for="r-tipo">Tipo</label>
+      <p-select inputId="r-tipo" name="tipo" [options]="opcionesTipo" optionLabel="label" optionValue="value" [(ngModel)]="fr.tipo" appendTo="body" />
+    </div>
+    <div class="gp-campo">
+      <label for="r-uni">Unidad</label>
+      <input pInputText id="r-uni" name="unidad" [(ngModel)]="fr.unidad" maxlength="30" placeholder="unidad, licencia, mes…" />
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="r-desc">Descripción</label>
+      <input pInputText id="r-desc" name="descripcion" [(ngModel)]="fr.descripcion" maxlength="150" required />
+      @if (errores()['descripcion']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="r-det">Detalle</label>
+      <input pInputText id="r-det" name="detalle" [(ngModel)]="fr.detalle" maxlength="150" placeholder="Tipo de licencia, modalidad de arriendo…" />
+    </div>
+    <div class="gp-campo">
+      <label for="r-cant">Cantidad</label>
+      <p-inputnumber inputId="r-cant" name="cantidad" [(ngModel)]="fr.cantidad" [min]="0" [maxFractionDigits]="2" locale="es-CL" />
+      @if (errores()['cantidad']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="r-cu">Costo unitario (CLP)</label>
+      <p-inputnumber inputId="r-cu" name="costoUnitario" [(ngModel)]="fr.costoUnitario" mode="currency" currency="CLP" locale="es-CL" [min]="0" [maxFractionDigits]="0" />
+      @if (errores()['costoUnitario']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="r-per">Período</label>
+      <p-inputnumber inputId="r-per" name="periodo" [(ngModel)]="fr.periodo" [min]="1" [max]="120" [showButtons]="true" />
+      <p class="gp-ayuda">Meses de licencia o arriendo.</p>
+    </div>
+    <div class="gp-campo">
+      <span class="gp-etiqueta">Costo total</span>
+      <strong>{{ (fr.cantidad ?? 0) * (fr.costoUnitario ?? 0) * (fr.periodo ?? 1) | clp }}</strong>
+    </div>
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="dlgRecurso.set(false)" />
+      <p-button label="Guardar" icon="pi pi-check" type="submit" form="form-rec" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog [header]="asigEditando() ? 'Editar uso del recurso' : 'Asignar recurso'" [visible]="dlgAsig()" (visibleChange)="dlgAsig.set($event)" [modal]="true" [draggable]="false" [style]="{ width: 'min(620px, calc(100vw - 32px))' }">
+  <form class="gp-form" id="form-ar" (ngSubmit)="guardarAsignacion()">
+    <div class="gp-campo gp-completo">
+      <label for="ar-act">Actividad (sin hijos)</label>
+      <p-select inputId="ar-act" name="actividadId" [options]="opcionesHojas()" optionLabel="label" optionValue="value" [(ngModel)]="fa.actividadId" [filter]="true" placeholder="Elige una actividad" appendTo="body" [disabled]="!!asigEditando()" />
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="ar-rec">Recurso</label>
+      <p-select inputId="ar-rec" name="recursoId" [options]="opcionesRecursos()" optionLabel="label" optionValue="value" [(ngModel)]="fa.recursoId" placeholder="Elige un recurso" appendTo="body" [disabled]="!!asigEditando()" />
+    </div>
+    <div class="gp-campo">
+      <label for="ar-cant">Cantidad</label>
+      <p-inputnumber inputId="ar-cant" name="cantidad" [(ngModel)]="fa.cantidad" [min]="0" [maxFractionDigits]="2" locale="es-CL" [suffix]="' ' + (recursoDe(fa.recursoId)?.unidad ?? '')" />
+    </div>
+    <div class="gp-campo">
+      <label for="ar-per">Período</label>
+      <p-inputnumber inputId="ar-per" name="periodo" [(ngModel)]="fa.periodo" [min]="1" [max]="120" [placeholder]="'Del recurso: ' + (recursoDe(fa.recursoId)?.periodo ?? 1)" />
+    </div>
+    <div class="gp-campo">
+      <label for="ar-real">Costo real (CLP)</label>
+      <p-inputnumber inputId="ar-real" name="costoReal" [(ngModel)]="fa.costoReal" mode="currency" currency="CLP" locale="es-CL" [min]="0" [maxFractionDigits]="0" />
+    </div>
+    <div class="gp-campo">
+      <span class="gp-etiqueta">Costo planificado</span>
+      <strong>{{ (fa.cantidad ?? 0) * (recursoDe(fa.recursoId)?.costoUnitario ?? 0) * (fa.periodo ?? recursoDe(fa.recursoId)?.periodo ?? 1) | clp }}</strong>
+    </div>
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="dlgAsig.set(false)" />
+      <p-button label="Guardar" icon="pi pi-check" type="submit" form="form-ar" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>

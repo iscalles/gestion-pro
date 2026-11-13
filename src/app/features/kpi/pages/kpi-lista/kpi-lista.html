@@ -1,0 +1,270 @@
+<p-toast position="bottom-right" />
+<p-confirmdialog [style]="{ width: 'min(460px, calc(100vw - 32px))' }" />
+
+<div class="gp-pagina">
+  <gp-page-header
+    titulo="Indicadores"
+    descripcion="KPI del proyecto, de sus hitos y de la gestión del cambio: fórmula, umbrales del semáforo e historial de mediciones."
+  >
+    @if (esAdmin() && ctx.proyectoId() != null) {
+      <p-button label="Nuevo KPI" icon="pi pi-plus" (onClick)="formulario.set({ kpi: null })" />
+    }
+  </gp-page-header>
+
+  @if (ctx.cargando()) {
+    <div class="panel gp-estado-carga" aria-busy="true">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="1.75rem" />
+      }
+    </div>
+  } @else if (ctx.proyectos().length === 0) {
+    <div class="panel gp-vacio">
+      @if (ctx.error(); as e) {
+        <p-message severity="error" [text]="e" />
+        <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="ctx.recargar()" />
+      } @else {
+        <p>Todavía no tienes proyectos asignados.</p>
+      }
+    </div>
+  } @else {
+    <div class="gp-barra">
+      <gp-selector-proyecto [ctx]="ctx" />
+      <div class="gp-campo">
+        <label for="k-cat">Categoría</label>
+        <p-select inputId="k-cat" [options]="opcionesCategoria" optionLabel="label" optionValue="value" [ngModel]="categoria()" (ngModelChange)="categoria.set($event)" />
+      </div>
+      <div class="gp-campo">
+        <label for="k-buscar">Buscar</label>
+        <input pInputText id="k-buscar" type="search" placeholder="Código o nombre" [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)" />
+      </div>
+    </div>
+
+    <dl class="gp-cifras">
+      <div class="gp-cifra">
+        <dt>KPI activos</dt>
+        <dd>{{ resumen().activos }}</dd>
+      </div>
+      <div class="gp-cifra">
+        <dt><i class="pi pi-check-circle gp-positivo" aria-hidden="true"></i> En meta</dt>
+        <dd>{{ resumen().verde }}</dd>
+      </div>
+      <div class="gp-cifra">
+        <dt><i class="pi pi-exclamation-circle alerta" aria-hidden="true"></i> En alerta</dt>
+        <dd>{{ resumen().ambar }}</dd>
+      </div>
+      <div class="gp-cifra">
+        <dt><i class="pi pi-times-circle gp-negativo" aria-hidden="true"></i> Fuera de meta</dt>
+        <dd [class.gp-negativo]="resumen().rojo > 0">{{ resumen().rojo }}</dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Sin datos</dt>
+        <dd>{{ resumen().sinDatos }}</dd>
+      </div>
+    </dl>
+
+    <section class="panel">
+      @if (error(); as e) {
+        <div class="gp-estado-carga">
+          <p-message severity="error" [text]="e" />
+          <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar(ctx.proyectoId()!)" />
+        </div>
+      } @else if (cargando() && kpis().length === 0) {
+        <div class="gp-estado-carga" aria-busy="true">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <p-skeleton height="1.75rem" />
+          }
+        </div>
+      } @else {
+        <p-table [value]="filtrados()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '1040px' }" dataKey="id" [rows]="20" [paginator]="filtrados().length > 20">
+          <ng-template #header>
+            <tr>
+              <th>Código</th>
+              <th>Indicador</th>
+              <th class="num">Valor actual</th>
+              <th class="num">Meta</th>
+              <th>Tendencia</th>
+              <th>Semáforo</th>
+              <th>Medido</th>
+              <th><span class="sr-only">Acciones</span></th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-k>
+            <tr class="gp-clic" [class.gp-fila-sel]="k.id === seleccionId()" [class.inactivo]="!k.activo" (click)="seleccionId.set(k.id)">
+              <td class="gp-codigo">{{ k.codigo }}</td>
+              <td>
+                <button type="button" class="enlace" (click)="seleccionId.set(k.id); $event.stopPropagation()" [attr.aria-pressed]="k.id === seleccionId()">{{ k.nombre }}</button>
+                <br />
+                <span class="gp-tenue">
+                  {{ ambito[$any(k.ambito)] }}{{ k.ambitoNombre ? ': ' + k.ambitoNombre : '' }} · {{ k.fuente === 'MANUAL' ? 'manual' : 'automático' }}
+                  @if (!k.activo) {
+                    · inactivo
+                  }
+                </span>
+              </td>
+              <td class="num">
+                <strong>{{ fmt(k.valor, k.unidad) }}</strong>
+                @if (variacion(k); as v) {
+                  <br /><span class="var" [class.gp-positivo]="v.mejora" [class.gp-tenue]="!v.mejora">{{ v.texto }}</span>
+                }
+              </td>
+              <td class="num">{{ fmt(k.meta, k.unidad) }}</td>
+              <td>
+                @if (k.historial.length > 1) {
+                  <gp-sparkline [valores]="tendencia(k)" />
+                } @else {
+                  <span class="gp-tenue">—</span>
+                }
+              </td>
+              <td><gp-semaforo [valor]="k.semaforo" /></td>
+              <td class="gp-fecha">{{ k.medidoEn ? (k.medidoEn | date: 'dd-MM-yyyy') : '—' }}</td>
+              <td>
+                @if (esAdmin()) {
+                  <div class="gp-acciones-fila">
+                    <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar ' + k.codigo" (onClick)="formulario.set({ kpi: k }); $event.stopPropagation()" />
+                    <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" [ariaLabel]="'Eliminar ' + k.codigo" (onClick)="eliminar(k); $event.stopPropagation()" />
+                  </div>
+                }
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="8" class="gp-vacio">
+                {{ kpis().length ? 'Ningún KPI coincide con el filtro.' : 'Este proyecto aún no tiene indicadores.' }}
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </section>
+
+    @if (seleccion(); as k) {
+      <section class="panel detalle" aria-live="polite">
+        <div class="gp-seccion gp-seccion-cabecera cab">
+          <div>
+            <h2><span class="gp-codigo">{{ k.codigo }}</span> {{ k.nombre }}</h2>
+            <p>{{ k.objetivo }}</p>
+          </div>
+          <div class="gp-acciones-fila">
+            <p-button label="Registrar medición" icon="pi pi-plus" [outlined]="true" (onClick)="abrirMedicion()" />
+            @if (esAdmin()) {
+              <p-button label="Editar" icon="pi pi-pencil" [outlined]="true" (onClick)="formulario.set({ kpi: k })" />
+            }
+          </div>
+        </div>
+        <div class="gp-seccion">
+          <dl class="gp-ficha">
+            <div>
+              <dt>Valor actual</dt>
+              <dd class="valor">{{ fmt(k.valor, k.unidad) }} <gp-semaforo [valor]="k.semaforo" /></dd>
+            </div>
+            <div>
+              <dt>Meta</dt>
+              <dd>{{ fmt(k.meta, k.unidad) }} ({{ k.sentido === 'MAYOR' ? 'más es mejor' : k.sentido === 'MENOR' ? 'menos es mejor' : 'dentro de un rango' }})</dd>
+            </div>
+            <div>
+              <dt>Ámbito</dt>
+              <dd>{{ ambito[$any(k.ambito)] }}{{ k.ambitoNombre ? ': ' + k.ambitoNombre : '' }}</dd>
+            </div>
+            <div>
+              <dt>Periodicidad</dt>
+              <dd>{{ periodicidad[$any(k.periodicidad)] }}</dd>
+            </div>
+            <div>
+              <dt>Responsable</dt>
+              <dd>{{ k.responsable ?? '—' }}</dd>
+            </div>
+            <div class="ancho">
+              <dt>Umbrales</dt>
+              <dd>{{ umbrales(k) }}</dd>
+            </div>
+            <div class="ancho">
+              <dt>Fórmula</dt>
+              <dd>
+                @if (k.formula) {
+                  <code class="formula">{{ k.formula }}</code>
+                } @else {
+                  Medición manual
+                }
+              </dd>
+            </div>
+          </dl>
+        </div>
+        @if (grafico(); as g) {
+          <div class="gp-seccion">
+            <gp-grafico-lineas [titulo]="'Historial de ' + k.codigo" [etiquetas]="g.etiquetas" [series]="g.series" [formato]="formatoDe(k)" [formatoEje]="formatoDe(k)" nombreX="Medición" />
+          </div>
+        }
+        <div class="gp-seccion">
+          <h3>Mediciones</h3>
+          <p-table [value]="k.historial" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '760px' }" [rows]="8" [paginator]="k.historial.length > 8">
+            <ng-template #header>
+              <tr>
+                <th>Fecha</th>
+                <th class="num">Valor</th>
+                <th>Semáforo</th>
+                <th>Origen</th>
+                <th>Detalle</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-m>
+              <tr>
+                <td class="gp-fecha">{{ m.medidoEn | date: 'dd-MM-yyyy HH:mm' }}</td>
+                <td class="num">{{ fmt(m.valor, k.unidad) }}</td>
+                <td><gp-semaforo [valor]="m.semaforo" /></td>
+                <td>{{ origen[$any(m.origen)] }}</td>
+                <td>
+                  @if (m.solicitud) {
+                    Por la aprobación de {{ m.solicitud }}
+                  }
+                  @if (m.registradoPor) {
+                    {{ m.registradoPor }}
+                  }
+                  @if (m.observacion) {
+                    <span class="gp-tenue">· {{ m.observacion }}</span>
+                  }
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr><td colspan="5" class="gp-vacio">Sin mediciones todavía.</td></tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </section>
+    }
+  }
+</div>
+
+<p-dialog header="Registrar medición" [visible]="dlgMedicion()" (visibleChange)="dlgMedicion.set($event)" [modal]="true" [draggable]="false" [style]="{ width: 'min(480px, calc(100vw - 32px))' }">
+  @if (seleccion(); as k) {
+    <form class="gp-form" id="form-med" (ngSubmit)="registrar()">
+      <p class="gp-completo texto">{{ k.codigo }} · {{ k.nombre }} ({{ k.unidad }})</p>
+      <div class="gp-campo">
+        <label for="m-valor">Valor</label>
+        <p-inputnumber inputId="m-valor" name="valor" [(ngModel)]="medicion.valor" [maxFractionDigits]="4" locale="es-CL" />
+      </div>
+      <div class="gp-campo">
+        <label for="m-fecha">Fecha</label>
+        <input pInputText type="date" id="m-fecha" name="fecha" [(ngModel)]="medicion.fecha" [max]="hoy" />
+      </div>
+      <div class="gp-campo gp-completo">
+        <label for="m-obs">Observación</label>
+        <textarea pTextarea id="m-obs" name="observacion" [(ngModel)]="medicion.observacion" rows="2" maxlength="500"></textarea>
+      </div>
+    </form>
+  }
+  @if (errorMedicion(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="dlgMedicion.set(false)" />
+      <p-button label="Registrar" icon="pi pi-check" type="submit" form="form-med" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+@if (formulario(); as f) {
+  <gp-kpi-formulario [proyectoId]="ctx.proyectoId()!" [kpi]="f.kpi" [cantidad]="kpis().length" (guardado)="guardado($event)" (cerrar)="formulario.set(null)" />
+}

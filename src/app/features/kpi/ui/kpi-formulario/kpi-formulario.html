@@ -1,0 +1,153 @@
+<p-dialog
+  [header]="kpi() ? 'Editar ' + kpi()!.codigo : 'Nuevo KPI'"
+  [visible]="visible()"
+  (visibleChange)="!$event && cerrarDialogo()"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: 'min(860px, calc(100vw - 32px))' }"
+>
+  <form class="gp-form" id="form-kpi" (ngSubmit)="guardar()">
+    <div class="gp-campo">
+      <label for="k-cod">Código</label>
+      <input pInputText id="k-cod" name="codigo" [(ngModel)]="f.codigo" maxlength="10" required />
+      @if (errores()['codigo']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="k-cat">Categoría</label>
+      <p-select inputId="k-cat" name="categoria" [options]="opcionesCategoria" optionLabel="label" optionValue="value" [(ngModel)]="f.categoria" appendTo="body" />
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="k-nom">Nombre</label>
+      <input pInputText id="k-nom" name="nombre" [(ngModel)]="f.nombre" maxlength="120" required />
+      @if (errores()['nombre']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="k-obj">Objetivo</label>
+      <textarea pTextarea id="k-obj" name="objetivo" [(ngModel)]="f.objetivo" rows="2" maxlength="500"></textarea>
+      @if (errores()['objetivo']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="k-amb">Ámbito</label>
+      <p-select inputId="k-amb" name="ambito" [options]="opcionesAmbito" optionLabel="label" optionValue="value" [(ngModel)]="f.ambito" (ngModelChange)="cambioAmbito()" appendTo="body" />
+    </div>
+    @if (f.ambito !== 'PROYECTO') {
+      <div class="gp-campo">
+        <label for="k-ref">{{ f.ambito === 'HITO' ? 'Hito' : f.ambito === 'CAMBIO' ? 'Solicitud de cambio' : f.ambito === 'ETAPA' ? 'Etapa' : 'Actividad' }}</label>
+        <p-select
+          inputId="k-ref"
+          name="ambitoRefId"
+          [options]="opcionesRef(f.ambito)"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="f.ambitoRefId"
+          [filter]="true"
+          [showClear]="f.ambito === 'HITO' || f.ambito === 'CAMBIO'"
+          [placeholder]="f.ambito === 'HITO' || f.ambito === 'CAMBIO' ? 'Todos' : 'Elige uno'"
+          appendTo="body"
+        />
+      </div>
+    } @else {
+      <div class="gp-campo">
+        <label for="k-per">Periodicidad</label>
+        <p-select inputId="k-per" name="periodicidad" [options]="opcionesPeriodicidad" optionLabel="label" optionValue="value" [(ngModel)]="f.periodicidad" appendTo="body" />
+      </div>
+    }
+
+    <div class="gp-campo">
+      <label for="k-fte">Fuente</label>
+      <p-select inputId="k-fte" name="fuente" [options]="opcionesFuente" optionLabel="label" optionValue="value" [(ngModel)]="f.fuente" appendTo="body" />
+    </div>
+    <div class="gp-campo">
+      <label for="k-uni">Unidad</label>
+      <input pInputText id="k-uni" name="unidad" [(ngModel)]="f.unidad" maxlength="20" placeholder="%, días, CLP, índice…" />
+    </div>
+
+    @if (f.fuente === 'AUTOMATICA' || f.formula) {
+      <div class="gp-campo gp-completo">
+        <label for="k-for">Fórmula</label>
+        <textarea #areaFormula pTextarea id="k-for" name="formula" class="formula" [(ngModel)]="f.formula" (ngModelChange)="prueba.set(null)" rows="2" maxlength="1000" placeholder="Ej.: (AVANCE_REAL / AVANCE_PLAN) * 100"></textarea>
+        <p class="gp-ayuda">Operadores + − × ÷ ( ), y las funciones min(a, b) y max(a, b). Pulsa una variable para insertarla.</p>
+        <div class="gp-chips" role="group" aria-label="Variables disponibles">
+          @for (v of variablesDe(f.categoria); track v.codigo) {
+            <button type="button" class="gp-chip" [title]="v.descripcion + ' (' + v.unidad + ')'" (click)="insertar(v.codigo)">{{ v.codigo }}</button>
+          }
+        </div>
+        <div class="prueba">
+          <p-button label="Probar con los datos de hoy" icon="pi pi-play" size="small" [outlined]="true" (onClick)="probar()" [loading]="probando()" [disabled]="!f.formula.trim()" />
+          @if (prueba(); as p) {
+            @if (p.mensaje) {
+              <p-message severity="warn" [text]="p.mensaje" />
+            } @else {
+              <span class="resultado">Resultado: <strong>{{ fmt(p.valor) }}</strong></span>
+            }
+          }
+        </div>
+        @if (prueba()?.variables?.length) {
+          <ul class="valores">
+            @for (v of prueba()!.variables; track v.codigo) {
+              <li><code>{{ v.codigo }}</code> {{ v.descripcion }}: <strong>{{ v.valor ?? 'sin dato' }}</strong> {{ v.unidad }}</li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
+    <div class="gp-campo">
+      <label for="k-sen">Sentido</label>
+      <p-select inputId="k-sen" name="sentido" [options]="opcionesSentido" optionLabel="label" optionValue="value" [(ngModel)]="f.sentido" appendTo="body" />
+    </div>
+    <div class="gp-campo">
+      <label for="k-meta">Meta</label>
+      <p-inputnumber inputId="k-meta" name="meta" [(ngModel)]="f.meta" [maxFractionDigits]="4" locale="es-CL" />
+      @if (errores()['meta']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+
+    <fieldset class="gp-completo umbrales">
+      <legend>Semáforo</legend>
+      <div class="fila">
+        <span class="nombre"><i class="pi pi-check-circle gp-positivo" aria-hidden="true"></i> En meta</span>
+        <p-inputnumber inputId="k-vmin" name="verdeMin" [(ngModel)]="f.verdeMin" [maxFractionDigits]="4" locale="es-CL" placeholder="desde" ariaLabel="Verde desde" />
+        <p-inputnumber inputId="k-vmax" name="verdeMax" [(ngModel)]="f.verdeMax" [maxFractionDigits]="4" locale="es-CL" placeholder="hasta" ariaLabel="Verde hasta" />
+      </div>
+      <div class="fila">
+        <span class="nombre"><i class="pi pi-exclamation-circle alerta" aria-hidden="true"></i> En alerta</span>
+        <p-inputnumber inputId="k-amin" name="ambarMin" [(ngModel)]="f.ambarMin" [maxFractionDigits]="4" locale="es-CL" placeholder="desde" ariaLabel="Ámbar desde" />
+        <p-inputnumber inputId="k-amax" name="ambarMax" [(ngModel)]="f.ambarMax" [maxFractionDigits]="4" locale="es-CL" placeholder="hasta" ariaLabel="Ámbar hasta" />
+      </div>
+      <p class="gp-ayuda">Deja vacío un extremo para un rango abierto. Lo que no cae en verde ni en ámbar queda «fuera de meta».</p>
+    </fieldset>
+
+    <div class="gp-campo">
+      <label for="k-resp">Responsable</label>
+      <p-select inputId="k-resp" name="responsableId" [options]="usuarios()" optionLabel="label" optionValue="value" [(ngModel)]="f.responsableId" placeholder="Elige un usuario" appendTo="body" />
+      @if (errores()['responsableId']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    @if (f.ambito !== 'PROYECTO') {
+      <div class="gp-campo">
+        <label for="k-per2">Periodicidad</label>
+        <p-select inputId="k-per2" name="periodicidad" [options]="opcionesPeriodicidad" optionLabel="label" optionValue="value" [(ngModel)]="f.periodicidad" appendTo="body" />
+      </div>
+    }
+    @if (f.categoria === 'PROYECTO') {
+      <div class="gp-campo gp-completo">
+        <label for="k-hitos">Hitos vinculados</label>
+        <p-multiselect inputId="k-hitos" name="hitoIds" [options]="hitos()" optionLabel="label" optionValue="value" [(ngModel)]="f.hitoIds" display="chip" placeholder="Ninguno" appendTo="body" />
+      </div>
+    }
+    @if (kpi()) {
+      <div class="gp-campo">
+        <label for="k-act">Activo</label>
+        <p-toggleswitch inputId="k-act" name="activo" [(ngModel)]="f.activo" />
+      </div>
+    }
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="cerrarDialogo()" />
+      <p-button [label]="kpi() ? 'Guardar cambios' : 'Crear KPI'" icon="pi pi-check" type="submit" form="form-kpi" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>

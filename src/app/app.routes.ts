@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, invitadoGuard, rolGuard } from './core/auth/auth.guards';
+import { authGuard, invitadoGuard } from './core/auth/auth.guards';
 
 export const routes: Routes = [
   {
@@ -19,12 +19,7 @@ export const routes: Routes = [
       { path: 'gantt', loadChildren: () => import('./features/gantt/gantt.routes') },
       { path: 'recursos', loadChildren: () => import('./features/recursos/recursos.routes') },
       { path: 'hitos', loadChildren: () => import('./features/hitos/hitos.routes') },
-      {
-        path: 'kpi',
-        canActivate: [rolGuard],
-        data: { roles: ['ADMINISTRADOR'] },
-        loadChildren: () => import('./features/kpi/kpi.routes'),
-      },
+      { path: 'kpi', loadChildren: () => import('./features/kpi/kpi.routes') },
       { path: 'cambios', loadChildren: () => import('./features/cambios/cambios.routes') },
       { path: 'tableros', loadChildren: () => import('./features/tableros/tableros.routes') },
     ],

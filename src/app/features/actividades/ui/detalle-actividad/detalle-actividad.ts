@@ -8,7 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, concat } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -50,7 +50,7 @@ interface FilaPredecesora {
  */
 @Component({
   selector: 'gp-detalle-actividad',
-  imports: [
+  imports: [DecimalPipe, 
     DatePipe,
     FormsModule,
     ButtonModule,

@@ -71,7 +71,7 @@
           </div>
           <div>
             <dt>Avance del proyecto</dt>
-            <dd>{{ resumen().avance }} %</dd>
+            <dd>{{ resumen().avance | number: '1.0-2' }} %</dd>
           </div>
           <div>
             <dt>Atrasadas</dt>
@@ -149,6 +149,7 @@
                 <th class="num">Duración</th>
                 <th>Inicio</th>
                 <th>Término</th>
+                <th class="num">Costo plan</th>
                 <th class="col-avance">Avance</th>
               </tr>
             </ng-template>
@@ -195,6 +196,7 @@
                           pTooltip="Atrasada: el término planificado ya pasó"
                         ></i>
                       }
+                      <span class="edt">{{ a.codigoEdt }}</span>
                       <span>{{ a.nombre }}</span>
                     </button>
                   </div>
@@ -206,6 +208,12 @@
                 <td class="num">{{ a.duracionPlan }} d</td>
                 <td class="fecha">{{ a.fechaInicioPlan | date: 'dd-MM-yyyy' }}</td>
                 <td class="fecha">{{ a.fechaTerminoPlan | date: 'dd-MM-yyyy' }}</td>
+                <td class="num costo" [class.sobre]="a.costoReal > a.costoPlan">
+                  {{ a.costoPlan | clp }}
+                  @if (a.costoReal > a.costoPlan) {
+                    <span class="sr-only">; costo real {{ a.costoReal | clp }} supera lo planificado</span>
+                  }
+                </td>
                 <td>
                   <div class="avance">
                     <p-progressbar
@@ -213,14 +221,15 @@
                       [showValue]="false"
                       [attr.aria-label]="'Avance ' + a.avance + '%'"
                     />
-                    <span class="num">{{ a.avance }}%</span>
+                    <span class="num">{{ a.avance | number: '1.0-1' }}%</span>
                   </div>
                 </td>
               </tr>
             </ng-template>
           </p-table>
           <p class="nota-tabla">
-            Duración en días hábiles según el calendario laboral. Las etapas y actividades con hijos
+            Código EDT derivado del orden de la estructura (1, 1.2, 1.2.3). Costo planificado según los profesionales y
+            recursos asignados (detalle en Recursos y costos). Duración en días hábiles según el calendario laboral. Las etapas y actividades con hijos
             muestran fechas y avance derivados; solo los elementos sin hijos reciben dependencias.
           </p>
         }

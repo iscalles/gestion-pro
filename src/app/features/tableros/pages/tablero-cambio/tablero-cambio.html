@@ -1,0 +1,264 @@
+<div class="gp-pagina">
+  <gp-page-header titulo="Gestión del cambio" descripcion="Estado, tiempos, costos, riesgo y cumplimiento de etapas de las solicitudes de cambio, con sus KPI y alertas.">
+    @if (ctx.proyectoId() != null) {
+      <p-button label="Ver solicitudes" icon="pi pi-list" [outlined]="true" routerLink="/cambios" [queryParams]="{ proyecto: ctx.proyectoId() }" />
+    }
+  </gp-page-header>
+
+  @if (ctx.cargando()) {
+    <div class="panel gp-estado-carga" aria-busy="true">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="1.75rem" />
+      }
+    </div>
+  } @else if (ctx.proyectos().length === 0) {
+    <div class="panel gp-vacio">
+      @if (ctx.error(); as e) {
+        <p-message severity="error" [text]="e" />
+      } @else {
+        <p>Todavía no tienes proyectos asignados.</p>
+      }
+    </div>
+  } @else {
+    <form class="gp-barra" (ngSubmit)="cargar()">
+      <gp-selector-proyecto [ctx]="ctx" />
+      <div class="gp-campo">
+        <label for="tc-tipo">Tipo</label>
+        <p-select inputId="tc-tipo" name="tipo" [options]="opTipo" optionLabel="label" optionValue="value" [(ngModel)]="filtro.tipo" (ngModelChange)="cargar()" />
+      </div>
+      <div class="gp-campo">
+        <label for="tc-pri">Prioridad</label>
+        <p-select inputId="tc-pri" name="prioridad" [options]="opPrioridad" optionLabel="label" optionValue="value" [(ngModel)]="filtro.prioridad" (ngModelChange)="cargar()" />
+      </div>
+      <div class="gp-campo fecha">
+        <label for="tc-desde">Solicitadas desde</label>
+        <input pInputText type="date" id="tc-desde" name="desde" [(ngModel)]="filtro.desde" />
+      </div>
+      <div class="gp-campo fecha">
+        <label for="tc-hasta">Hasta</label>
+        <input pInputText type="date" id="tc-hasta" name="hasta" [(ngModel)]="filtro.hasta" />
+      </div>
+      <p-button label="Aplicar fechas" type="submit" icon="pi pi-filter" [outlined]="true" />
+      @if (hayFiltro()) {
+        <p-button label="Quitar filtros" [text]="true" (onClick)="limpiar()" />
+      }
+    </form>
+
+    @if (error(); as e) {
+      <div class="panel gp-estado-carga">
+        <p-message severity="error" [text]="e" />
+        <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar()" />
+      </div>
+    } @else if (!datos()) {
+      <div class="panel gp-estado-carga" aria-busy="true">
+        <p-skeleton height="6rem" />
+        <p-skeleton height="16rem" />
+      </div>
+    } @else {
+      @let d = datos()!;
+      @let r = d.resumen;
+      <div [class.recargando]="cargando()">
+        <dl class="gp-cifras">
+          <div class="gp-cifra">
+            <dt>Solicitudes</dt>
+            <dd>{{ r.total }}</dd>
+            <span class="gp-cifra-nota">{{ r.enCurso }} en curso · {{ r.cerradas }} {{ r.cerradas === 1 ? 'cerrada' : 'cerradas' }}</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Tasa de aprobación</dt>
+            <dd>{{ r.tasaAprobacion == null ? '—' : (r.tasaAprobacion | number: '1.0-1') + ' %' }}</dd>
+            <span class="gp-cifra-nota">{{ r.aprobadas }} {{ r.aprobadas === 1 ? 'aprobada' : 'aprobadas' }} · {{ r.rechazadas }} {{ r.rechazadas === 1 ? 'rechazada' : 'rechazadas' }}</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Tiempo medio</dt>
+            <dd>{{ fmtDias(r.diasEvaluacionPromedio) }}</dd>
+            <span class="gp-cifra-nota">de evaluación · {{ fmtDias(r.diasImplementacionPromedio) }} de implementación</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Costo real de los cambios</dt>
+            <dd [class.gp-negativo]="r.costoReal > r.costoEstimado">{{ r.costoReal | clp }}</dd>
+            <span class="gp-cifra-nota">Estimado {{ r.costoEstimado | clp }}</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Impacto en el plan</dt>
+            <dd [class.gp-negativo]="r.diasDesviacion > 0">{{ r.diasDesviacion > 0 ? '+' : '' }}{{ r.diasDesviacion }} d</dd>
+            <span class="gp-cifra-nota">{{ r.impactoCostoPlan > 0 ? '+' : '' }}{{ r.impactoCostoPlan | clp }} en costo planificado</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Atrasadas · riesgo crítico</dt>
+            <dd [class.gp-negativo]="r.atrasadas + r.riesgosCriticos > 0">{{ r.atrasadas }} · {{ r.riesgosCriticos }}</dd>
+          </div>
+          <div class="gp-cifra">
+            <dt>Acciones correctivas</dt>
+            <dd>{{ r.accionesAbiertas }} <span class="gp-tenue">{{ r.accionesAbiertas === 1 ? 'abierta' : 'abiertas' }}</span></dd>
+            <span class="gp-cifra-nota" [class.gp-negativo]="r.accionesVencidas > 0">{{ r.accionesVencidas }} {{ r.accionesVencidas === 1 ? 'vencida' : 'vencidas' }} · {{ r.accionesCerradas }} {{ r.accionesCerradas === 1 ? 'cerrada' : 'cerradas' }}</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Efectividad · adopción</dt>
+            <dd>
+              {{ r.efectividadPromedio == null ? '—' : (r.efectividadPromedio | number: '1.0-0') + ' %' }} ·
+              {{ r.adopcionPromedio == null ? '—' : (r.adopcionPromedio | number: '1.0-0') + ' %' }}
+            </dd>
+            <span class="gp-cifra-nota">Promedio de solicitudes cerradas</span>
+          </div>
+        </dl>
+
+        <div class="gp-rejilla">
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera">
+              <div>
+                <h2>Matriz de riesgo</h2>
+                <p>Solicitudes abiertas según probabilidad e impacto. Las celdas con borde rojo son críticas.</p>
+              </div>
+            </div>
+            <div class="matriz">
+              <table>
+                <caption class="sr-only">Cantidad de solicitudes por probabilidad (columnas) e impacto (filas)</caption>
+                <thead>
+                  <tr>
+                    <td class="eje-y">Impacto ↓ / Probabilidad →</td>
+                    @for (p of probabilidades; track p.clave) {
+                      <th scope="col">{{ p.nombre }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (i of impactos; track i.clave) {
+                    <tr>
+                      <th scope="row">{{ i.nombre }}</th>
+                      @for (p of probabilidades; track p.clave) {
+                        @let c = celda(p.clave, i.clave);
+                        <td>
+                          <div
+                            class="celda"
+                            [class.critica]="critica(p.clave, i.clave)"
+                            [style.background]="fondo(c.cantidad)"
+                            [style.color]="tinta(c.cantidad)"
+                            [pTooltip]="c.solicitudes.length ? c.solicitudes.join(', ') : 'Sin solicitudes'"
+                            tabindex="0"
+                            [attr.aria-label]="'Probabilidad ' + p.nombre + ', impacto ' + i.nombre + ': ' + c.cantidad + (c.solicitudes.length ? ' (' + c.solicitudes.join(', ') + ')' : '')"
+                          >
+                            <strong>{{ c.cantidad }}</strong>
+                            @if (critica(p.clave, i.clave) && c.cantidad > 0) {
+                              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                            }
+                          </div>
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera">
+              <div>
+                <h2>Cumplimiento de plazos por etapa</h2>
+                <p>Etapas completadas a tiempo o fuera de su fecha límite, y las que siguen en curso.</p>
+              </div>
+            </div>
+            <ul class="gp-leyenda">
+              <li><span class="gp-muestra" [style.background]="'#1f6b3a'"></span><i class="pi pi-check-circle" aria-hidden="true"></i> A tiempo</li>
+              <li><span class="gp-muestra" [style.background]="'#8a5300'"></span><i class="pi pi-exclamation-circle" aria-hidden="true"></i> Fuera de plazo</li>
+              <li><span class="gp-muestra" [style.background]="'#a3231b'"></span><i class="pi pi-times-circle" aria-hidden="true"></i> Vencida en curso</li>
+              <li><span class="gp-muestra" [style.background]="'#a9c8c9'"></span>En curso a tiempo</li>
+            </ul>
+            <div class="apiladas">
+              @for (f of etapas().filas; track f.etiqueta) {
+                <gp-barra-apilada [etiqueta]="f.etiqueta" [segmentos]="f.segmentos" [escala]="etapas().escala" />
+              }
+            </div>
+          </section>
+        </div>
+
+        <div class="gp-rejilla bloque">
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera"><h2>Costo estimado y real por solicitud</h2></div>
+            @if (costos(); as g) {
+              <gp-grafico-barras titulo="Costo estimado y real por solicitud" nombreCategoria="Solicitud" [categorias]="g.categorias" [series]="g.series" [formato]="fmtPesos" [formatoEje]="fmtPesosEje" />
+            } @else {
+              <p class="gp-tenue">Sin solicitudes en el filtro.</p>
+            }
+          </section>
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera"><h2>Tiempos de evaluación e implementación</h2></div>
+            @if (tiempos(); as g) {
+              <gp-grafico-barras titulo="Días de evaluación e implementación por solicitud" nombreCategoria="Solicitud" [categorias]="g.categorias" [series]="g.series" [formato]="fmtDias" [formatoEje]="fmtEjeDias" [enteros]="true" />
+            } @else {
+              <p class="gp-tenue">Todavía no hay solicitudes decididas.</p>
+            }
+          </section>
+        </div>
+
+        <div class="gp-rejilla bloque tres">
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera"><h2>Por estado</h2></div>
+            @if (porEstado(); as g) {
+              <gp-grafico-barras titulo="Solicitudes por estado" nombreCategoria="Estado" [categorias]="g.categorias" [series]="g.series" [formato]="fmtCantidad" [formatoEje]="fmtEjeCantidad" [enteros]="true" />
+            }
+          </section>
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera"><h2>Por tipo</h2></div>
+            @if (porTipo(); as g) {
+              <gp-grafico-barras titulo="Solicitudes por tipo" nombreCategoria="Tipo" [categorias]="g.categorias" [series]="g.series" [formato]="fmtCantidad" [formatoEje]="fmtEjeCantidad" [enteros]="true" />
+            }
+          </section>
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera"><h2>En curso por etapa</h2></div>
+            @if (porEtapa(); as g) {
+              @if (g.categorias.length) {
+                <gp-grafico-barras titulo="Solicitudes en curso por etapa" nombreCategoria="Etapa" [categorias]="g.categorias" [series]="g.series" [formato]="fmtCantidad" [formatoEje]="fmtEjeCantidad" [enteros]="true" />
+              } @else {
+                <p class="gp-tenue">Ninguna solicitud en curso.</p>
+              }
+            }
+          </section>
+        </div>
+
+        <section class="panel gp-seccion bloque">
+          <div class="gp-seccion-cabecera">
+            <h2>Indicadores de gestión del cambio</h2>
+            <p-button label="Ver indicadores" [text]="true" icon="pi pi-arrow-right" iconPos="right" routerLink="/kpi" [queryParams]="{ proyecto: ctx.proyectoId() }" />
+          </div>
+          <gp-kpi-mosaico [kpis]="d.kpis" [proyectoId]="ctx.proyectoId()" />
+        </section>
+
+        <div class="gp-rejilla bloque">
+          <section class="panel">
+            <div class="gp-seccion gp-seccion-cabecera cab"><h2>Acciones correctivas</h2></div>
+            <p-table [value]="d.acciones" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '560px' }" [rows]="8" [paginator]="d.acciones.length > 8">
+              <ng-template #header>
+                <tr>
+                  <th>Solicitud</th>
+                  <th>Acción</th>
+                  <th>Compromiso</th>
+                  <th>Estado</th>
+                </tr>
+              </ng-template>
+              <ng-template #body let-a>
+                <tr>
+                  <td><a class="enlace" [routerLink]="['/cambios', a.solicitudId]" [queryParams]="{ proyecto: ctx.proyectoId() }">{{ a.solicitud }}</a></td>
+                  <td>{{ a.descripcion }}<br /><span class="gp-tenue">{{ a.responsable }}</span></td>
+                  <td class="gp-fecha" [class.gp-negativo]="a.vencida">{{ a.fechaCompromiso | date: 'dd-MM-yyyy' }}</td>
+                  <td>
+                    <gp-status-badge [tono]="a.estado === 'CERRADA' ? 'ok' : a.vencida ? 'danger' : 'warn'">
+                      {{ a.estado === 'CERRADA' ? 'Cerrada' : a.vencida ? 'Vencida' : 'Abierta' }}
+                    </gp-status-badge>
+                  </td>
+                </tr>
+              </ng-template>
+              <ng-template #emptymessage>
+                <tr><td colspan="4" class="gp-vacio">Sin acciones correctivas.</td></tr>
+              </ng-template>
+            </p-table>
+          </section>
+          <section class="panel gp-seccion">
+            <div class="gp-seccion-cabecera"><h2>Alertas de cambios</h2></div>
+            <gp-lista-alertas [alertas]="d.alertas" />
+          </section>
+        </div>
+      </div>
+    }
+  }
+</div>

@@ -1,0 +1,217 @@
+<p-toast position="bottom-right" />
+
+<div class="gp-pagina">
+  <gp-page-header
+    titulo="Solicitudes de cambio"
+    descripcion="Registro, evaluación, aprobación e implementación de cambios en 10 etapas, con trazabilidad sobre el plan."
+  >
+    @if (ctx.proyectoId() != null) {
+      <p-button label="Nueva solicitud" icon="pi pi-plus" (onClick)="nueva.set(true)" />
+    }
+  </gp-page-header>
+
+  @if (ctx.cargando()) {
+    <div class="panel gp-estado-carga" aria-busy="true">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="1.75rem" />
+      }
+    </div>
+  } @else if (ctx.proyectos().length === 0) {
+    <div class="panel gp-vacio">
+      @if (ctx.error(); as e) {
+        <p-message severity="error" [text]="e" />
+        <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="ctx.recargar()" />
+      } @else {
+        <p>Todavía no tienes proyectos asignados.</p>
+      }
+    </div>
+  } @else {
+    <div class="gp-barra">
+      <gp-selector-proyecto [ctx]="ctx" />
+    </div>
+
+    <dl class="gp-cifras">
+      <div class="gp-cifra">
+        <dt>En registro y evaluación</dt>
+        <dd>{{ resumen().abiertas }}</dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Aprobadas en curso</dt>
+        <dd>{{ resumen().enImplementacion }}</dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Cerradas · rechazadas</dt>
+        <dd>{{ resumen().cerradas }} · {{ resumen().rechazadas }}</dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Atrasadas</dt>
+        <dd [class.gp-negativo]="resumen().atrasadas > 0">{{ resumen().atrasadas }}</dd>
+        <span class="gp-cifra-nota">Fecha comprometida vencida</span>
+      </div>
+      <div class="gp-cifra">
+        <dt>Riesgo crítico</dt>
+        <dd [class.gp-negativo]="resumen().criticas > 0">{{ resumen().criticas }}</dd>
+        <span class="gp-cifra-nota">Probabilidad e impacto altos</span>
+      </div>
+    </dl>
+
+    <div class="panel">
+      <p-tabs [value]="pestana()" (valueChange)="pestana.set($event)" styleClass="gp-pestanas" [scrollable]="true">
+        <p-tablist>
+          <p-tab value="solicitudes">Solicitudes ({{ resumen().total }})</p-tab>
+          <p-tab value="acciones">Acciones correctivas ({{ accionesAbiertas() }} {{ accionesAbiertas() === 1 ? 'abierta' : 'abiertas' }})</p-tab>
+          <p-tab value="trazabilidad">Trazabilidad</p-tab>
+          <p-tab value="lineas">Líneas base</p-tab>
+        </p-tablist>
+        <p-tabpanels>
+          <p-tabpanel value="solicitudes">
+            <div class="gp-seccion">
+              <div class="gp-barra filtros">
+                <div class="gp-campo">
+                  <label for="c-buscar">Buscar</label>
+                  <input pInputText id="c-buscar" type="search" placeholder="Código, título o persona" [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)" />
+                </div>
+                <div class="gp-campo">
+                  <label for="c-est">Estado</label>
+                  <p-select inputId="c-est" [options]="opEstado" optionLabel="label" optionValue="value" [ngModel]="estadoFiltro()" (ngModelChange)="estadoFiltro.set($event)" />
+                </div>
+                <div class="gp-campo">
+                  <label for="c-tipo">Tipo</label>
+                  <p-select inputId="c-tipo" [options]="opTipo" optionLabel="label" optionValue="value" [ngModel]="tipoFiltro()" (ngModelChange)="tipoFiltro.set($event)" />
+                </div>
+                <div class="gp-campo">
+                  <label for="c-pri">Prioridad</label>
+                  <p-select inputId="c-pri" [options]="opPrioridad" optionLabel="label" optionValue="value" [ngModel]="prioridadFiltro()" (ngModelChange)="prioridadFiltro.set($event)" />
+                </div>
+              </div>
+              @if (error(); as e) {
+                <div class="gp-estado-carga">
+                  <p-message severity="error" [text]="e" />
+                  <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar(ctx.proyectoId()!)" />
+                </div>
+              } @else if (cargando() && solicitudes().length === 0) {
+                <div class="gp-estado-carga" aria-busy="true">
+                  @for (i of [1, 2, 3]; track i) {
+                    <p-skeleton height="1.75rem" />
+                  }
+                </div>
+              } @else {
+                <p-table [value]="filtradas()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '1120px' }" dataKey="id">
+                  <ng-template #header>
+                    <tr>
+                      <th>Código</th>
+                      <th>Solicitud</th>
+                      <th>Tipo</th>
+                      <th>Prioridad</th>
+                      <th>Etapa</th>
+                      <th>Estado</th>
+                      <th>Comprometida</th>
+                      <th>Riesgo</th>
+                      <th class="num">Costo estimado / real</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template #body let-s>
+                    <tr>
+                      <td class="gp-codigo">{{ s.codigo }}</td>
+                      <td>
+                        <a class="nombre" [routerLink]="['/cambios', s.id]" [queryParams]="{ proyecto: ctx.proyectoId() }">{{ s.titulo }}</a>
+                        <br /><span class="gp-tenue">{{ s.solicitante }} · {{ s.fechaSolicitud | date: 'dd-MM-yyyy' }}</span>
+                      </td>
+                      <td>{{ tipo[$any(s.tipo)] }}</td>
+                      <td><gp-status-badge [tono]="pri(s.prioridad).tono">{{ pri(s.prioridad).etiqueta }}</gp-status-badge></td>
+                      <td>
+                        <div class="etapa">
+                          <span>{{ s.etapaActual }}/10 · {{ s.etapaNombre }}</span>
+                          <p-progressbar [value]="s.estado === 'CERRADO' ? 100 : ((s.etapaActual - 1) / 10) * 100" [showValue]="false" [attr.aria-label]="'Etapa ' + s.etapaActual + ' de 10'" />
+                        </div>
+                      </td>
+                      <td><gp-status-badge [tono]="est(s.estado).tono">{{ est(s.estado).etiqueta }}</gp-status-badge></td>
+                      <td class="gp-fecha">
+                        <span [class.gp-negativo]="s.atrasada">
+                          @if (s.atrasada) {
+                            <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                          }
+                          {{ s.fechaComprometida | date: 'dd-MM-yyyy' }}
+                        </span>
+                        @if (s.atrasada) {
+                          <span class="sr-only">(atrasada)</span>
+                        }
+                      </td>
+                      <td><gp-status-badge [tono]="riesgo(s.probabilidad, s.impacto).tono">{{ riesgo(s.probabilidad, s.impacto).etiqueta }}</gp-status-badge></td>
+                      <td class="num">
+                        {{ s.costoEstimado | clp }}<br />
+                        <span class="gp-tenue">{{ s.costoReal == null ? '—' : (s.costoReal | clp) }}</span>
+                      </td>
+                    </tr>
+                  </ng-template>
+                  <ng-template #emptymessage>
+                    <tr>
+                      <td colspan="9" class="gp-vacio">
+                        @if (solicitudes().length) {
+                          Ninguna solicitud coincide con los filtros.
+                          <p-button label="Limpiar filtros" [text]="true" (onClick)="limpiar()" />
+                        } @else {
+                          Este proyecto aún no tiene solicitudes de cambio.
+                        }
+                      </td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              }
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel value="acciones">
+            <div class="gp-seccion">
+              <p-table [value]="acciones()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '900px' }" dataKey="id">
+                <ng-template #header>
+                  <tr>
+                    <th>Solicitud</th>
+                    <th>Acción</th>
+                    <th>Responsable</th>
+                    <th>Compromiso</th>
+                    <th>Cierre</th>
+                    <th>Estado</th>
+                  </tr>
+                </ng-template>
+                <ng-template #body let-a>
+                  <tr>
+                    <td><a class="nombre" [routerLink]="['/cambios', a.solicitudId]" [queryParams]="{ proyecto: ctx.proyectoId() }">{{ a.solicitud }}</a></td>
+                    <td>{{ a.descripcion }}</td>
+                    <td>{{ a.responsable }}</td>
+                    <td class="gp-fecha" [class.gp-negativo]="a.vencida">{{ a.fechaCompromiso | date: 'dd-MM-yyyy' }}</td>
+                    <td class="gp-fecha">{{ a.fechaCierre ? (a.fechaCierre | date: 'dd-MM-yyyy') : '—' }}</td>
+                    <td>
+                      <gp-status-badge [tono]="a.estado === 'CERRADA' ? 'ok' : a.vencida ? 'danger' : 'warn'">
+                        {{ a.estado === 'CERRADA' ? 'Cerrada' : a.vencida ? 'Vencida' : 'Abierta' }}
+                      </gp-status-badge>
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template #emptymessage>
+                  <tr><td colspan="6" class="gp-vacio">Sin acciones correctivas registradas.</td></tr>
+                </ng-template>
+              </p-table>
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel value="trazabilidad">
+            @if (pestana() === 'trazabilidad') {
+              <gp-trazabilidad [proyectoId]="ctx.proyectoId()!" />
+            }
+          </p-tabpanel>
+
+          <p-tabpanel value="lineas">
+            @if (pestana() === 'lineas') {
+              <gp-lineas-base [proyectoId]="ctx.proyectoId()!" />
+            }
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
+    </div>
+  }
+</div>
+
+@if (nueva()) {
+  <gp-solicitud-formulario [proyectoId]="ctx.proyectoId()!" (guardado)="creada($event)" (cerrar)="nueva.set(false)" />
+}

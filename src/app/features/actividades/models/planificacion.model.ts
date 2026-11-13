@@ -21,6 +21,10 @@ export interface Actividad {
   avance: number;
   esHoja: boolean;
   atrasada: boolean;
+  /** Código EDT derivado del orden del árbol: 1, 1.2, 1.2.3. */
+  codigoEdt: string;
+  costoPlan: number;
+  costoReal: number;
 }
 
 export interface Dependencia {

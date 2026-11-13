@@ -1,0 +1,199 @@
+<p-toast position="bottom-right" />
+<p-confirmdialog [style]="{ width: 'min(460px, calc(100vw - 32px))' }" />
+
+<div class="gp-pagina">
+  <gp-page-header
+    titulo="Recursos y costos"
+    descripcion="Profesionales y recursos materiales de cada actividad, costo planificado y real, y carga semanal del equipo."
+  >
+    <p-button label="Ver actividades" icon="pi pi-list" [outlined]="true" routerLink="/actividades" [queryParams]="{ proyecto: ctx.proyectoId() }" />
+  </gp-page-header>
+
+  @if (ctx.cargando()) {
+    <div class="panel gp-estado-carga" aria-busy="true">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="1.75rem" />
+      }
+    </div>
+  } @else if (ctx.proyectos().length === 0) {
+    <div class="panel gp-vacio">
+      @if (ctx.error(); as e) {
+        <p-message severity="error" [text]="e" />
+        <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="ctx.recargar()" />
+      } @else {
+        <p>Todavía no tienes proyectos asignados.</p>
+      }
+    </div>
+  } @else {
+    <div class="gp-barra">
+      <gp-selector-proyecto [ctx]="ctx" />
+    </div>
+
+    @if (error(); as e) {
+      <div class="panel gp-estado-carga">
+        <p-message severity="error" [text]="e" />
+        <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar(ctx.proyectoId()!)" />
+      </div>
+    } @else if (!costos()) {
+      <div class="panel gp-estado-carga" aria-busy="true">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <p-skeleton height="1.75rem" />
+        }
+      </div>
+    } @else {
+      @let c = costos()!;
+      <dl class="gp-cifras">
+        <div class="gp-cifra">
+          <dt>Presupuesto</dt>
+          <dd>{{ c.presupuesto | clp }}</dd>
+        </div>
+        <div class="gp-cifra">
+          <dt>Costo planificado</dt>
+          <dd>{{ c.costoPlan | clp }}</dd>
+          <span class="gp-cifra-nota" [class.gp-negativo]="c.costoPlan > c.presupuesto">
+            {{ usoPresupuesto(c) | number: '1.0-1' }} % del presupuesto
+          </span>
+        </div>
+        <div class="gp-cifra">
+          <dt>Costo real a la fecha</dt>
+          <dd>{{ c.costoReal | clp }}</dd>
+        </div>
+        <div class="gp-cifra">
+          <dt>Valor ganado (EV)</dt>
+          <dd>{{ c.valorGanado | clp }}</dd>
+          <span class="gp-cifra-nota">Planificado a hoy (PV): {{ c.valorPlanificado | clp }}</span>
+        </div>
+        <div class="gp-cifra">
+          <dt>SPI · CPI</dt>
+          <dd>
+            <span [class.gp-negativo]="c.spi != null && c.spi < 0.95">{{ c.spi == null ? '—' : (c.spi | number: '1.2-2') }}</span>
+            ·
+            <span [class.gp-negativo]="c.cpi != null && c.cpi < 0.95">{{ c.cpi == null ? '—' : (c.cpi | number: '1.2-2') }}</span>
+          </dd>
+          <span class="gp-cifra-nota">Bajo 1: atraso o sobrecosto</span>
+        </div>
+        <div class="gp-cifra">
+          <dt>Sobreasignación</dt>
+          <dd [class.gp-negativo]="avisos().profesionalesSobre > 0">
+            @if (avisos().profesionalesSobre > 0) {
+              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+            }
+            {{ avisos().profesionalesSobre }} {{ avisos().profesionalesSobre === 1 ? 'profesional' : 'profesionales' }}
+          </dd>
+          <span class="gp-cifra-nota">{{ avisos().sobre }} semanas con exceso de horas</span>
+        </div>
+      </dl>
+
+      <div class="panel">
+        <p-tabs [value]="pestana()" (valueChange)="pestana.set($event)" styleClass="gp-pestanas" [scrollable]="true">
+          <p-tablist>
+            <p-tab value="costos"><i class="pi pi-dollar" aria-hidden="true"></i> Costos</p-tab>
+            <p-tab value="profesionales"><i class="pi pi-user" aria-hidden="true"></i> Profesionales ({{ c.asignacionesProfesional.length }})</p-tab>
+            <p-tab value="recursos"><i class="pi pi-box" aria-hidden="true"></i> Recursos materiales ({{ c.recursos.length }})</p-tab>
+            <p-tab value="requerimientos">
+              <i class="pi pi-id-card" aria-hidden="true"></i> Requerimientos
+              @if (avisos().faltantes > 0) {
+                <span class="aviso">{{ avisos().faltantes }} sin cubrir</span>
+              }
+            </p-tab>
+            <p-tab value="carga"><i class="pi pi-calendar" aria-hidden="true"></i> Carga semanal</p-tab>
+            @if (esAdmin()) {
+              <p-tab value="catalogo"><i class="pi pi-users" aria-hidden="true"></i> Catálogo de profesionales</p-tab>
+            }
+          </p-tablist>
+          <p-tabpanels>
+            <p-tabpanel value="costos">
+              <div class="gp-rejilla graficos">
+                @if (porTipo(); as g) {
+                  <section class="gp-seccion">
+                    <div class="gp-seccion-cabecera"><h2>Costo por tipo de recurso</h2></div>
+                    <gp-grafico-barras titulo="Costo planificado y real por tipo de recurso" nombreCategoria="Tipo" [categorias]="g.categorias" [series]="g.series" [formato]="fmtPesos" [formatoEje]="fmtPesosEje" />
+                  </section>
+                }
+                @if (porEtapa(); as g) {
+                  <section class="gp-seccion">
+                    <div class="gp-seccion-cabecera"><h2>Costo por etapa</h2></div>
+                    <gp-grafico-barras titulo="Costo planificado y real por etapa" nombreCategoria="Etapa" [categorias]="g.categorias" [series]="g.series" [formato]="fmtPesos" [formatoEje]="fmtPesosEje" />
+                  </section>
+                }
+              </div>
+              <section class="gp-seccion borde">
+                <div class="gp-seccion-cabecera">
+                  <div>
+                    <h2>Costo por actividad (EDT)</h2>
+                    <p>Las etapas y actividades con hijos suman el costo de sus subactividades. La desviación compara el costo real con el valor ganado (plan × avance).</p>
+                  </div>
+                  <p-button [label]="soloEtapas() ? 'Ver todo el detalle' : 'Ver solo etapas y actividades'" [text]="true" size="small" (onClick)="soloEtapas.set(!soloEtapas())" />
+                </div>
+                <p-table [value]="filasCosto()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '900px' }" dataKey="id">
+                  <ng-template #header>
+                    <tr>
+                      <th>Actividad</th>
+                      <th class="num">Profesionales</th>
+                      <th class="num">Recursos</th>
+                      <th class="num">Costo planificado</th>
+                      <th class="num">Costo real</th>
+                      <th class="num" title="Costo real menos valor ganado (costo planificado × avance)">Desviación vs. valor ganado</th>
+                      <th class="num">Avance</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template #body let-a>
+                    <tr [class.gp-fila-grupo]="a.nivel === 0">
+                      <td>
+                        <span class="sangria" [style.padding-left.px]="a.nivel * 18">
+                          <span class="gp-codigo">{{ a.codigoEdt }}</span> {{ a.nombre }}
+                        </span>
+                      </td>
+                      <td class="num">{{ a.planProfesionales | clp }}</td>
+                      <td class="num">{{ a.planRecursos | clp }}</td>
+                      <td class="num">{{ a.costoPlan | clp }}</td>
+                      <td class="num">{{ a.costoReal | clp }}</td>
+                      <td class="num" [class.gp-negativo]="desviacion(a) > 0">
+                        @if (a.avance > 0 || a.costoReal > 0) {
+                          {{ desviacion(a) > 0 ? '+' : '' }}{{ desviacion(a) | clp }}
+                        } @else {
+                          —
+                        }
+                      </td>
+                      <td class="num">{{ a.avance | number: '1.0-1' }} %</td>
+                    </tr>
+                  </ng-template>
+                  <ng-template #footer>
+                    <tr>
+                      <td>Total del proyecto</td>
+                      <td class="num"></td>
+                      <td class="num"></td>
+                      <td class="num">{{ c.costoPlan | clp }}</td>
+                      <td class="num">{{ c.costoReal | clp }}</td>
+                      <td class="num"></td>
+                      <td class="num"></td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </section>
+            </p-tabpanel>
+            <p-tabpanel value="profesionales">
+              <gp-asignaciones-profesional [proyectoId]="ctx.proyectoId()!" [costos]="c" [profesionales]="profesionales()" (actualizado)="actualizado($event)" />
+            </p-tabpanel>
+            <p-tabpanel value="recursos">
+              <gp-recursos-materiales [proyectoId]="ctx.proyectoId()!" [costos]="c" (actualizado)="actualizado($event)" />
+            </p-tabpanel>
+            <p-tabpanel value="requerimientos">
+              <gp-requerimientos [proyectoId]="ctx.proyectoId()!" [costos]="c" [tipos]="tipos()" (actualizado)="actualizado($event)" />
+            </p-tabpanel>
+            <p-tabpanel value="carga">
+              @if (pestana() === 'carga') {
+                <gp-carga-semanal [proyectoId]="ctx.proyectoId()!" [proyecto]="ctx.proyecto()" [version]="c" />
+              }
+            </p-tabpanel>
+            @if (esAdmin()) {
+              <p-tabpanel value="catalogo">
+                <gp-catalogo-profesionales [profesionales]="profesionales()" [tipos]="tipos()" (cambio)="cargarCatalogo()" />
+              </p-tabpanel>
+            }
+          </p-tabpanels>
+        </p-tabs>
+      </div>
+    }
+  }
+</div>

@@ -1,0 +1,101 @@
+<section class="gp-seccion">
+  <div class="gp-seccion-cabecera">
+    <div>
+      <h2>Carga semanal del equipo</h2>
+      <p>Horas por semana de cada profesional en todos sus proyectos, prorrateadas por los días hábiles de cada actividad.</p>
+    </div>
+    <form class="gp-barra" style="margin: 0" (ngSubmit)="cargar()">
+      <div class="gp-campo" style="flex-basis: 150px">
+        <label for="c-desde">Desde</label>
+        <input pInputText type="date" id="c-desde" name="desde" [(ngModel)]="desde" />
+      </div>
+      <div class="gp-campo" style="flex-basis: 150px">
+        <label for="c-hasta">Hasta</label>
+        <input pInputText type="date" id="c-hasta" name="hasta" [(ngModel)]="hasta" />
+      </div>
+      <p-button label="Aplicar" type="submit" [outlined]="true" icon="pi pi-filter" />
+    </form>
+  </div>
+
+  <ul class="gp-leyenda">
+    <li><span class="gp-muestra" style="background: #cfe6e7"></span>Baja</li>
+    <li><span class="gp-muestra" style="background: #7fadaf"></span>Media</li>
+    <li><span class="gp-muestra" style="background: #2c6163"></span>Al 100 %</li>
+    <li><span class="gp-muestra" style="background: var(--gp-danger-soft); outline: 1px solid var(--gp-danger)"></span><i class="pi pi-exclamation-triangle" aria-hidden="true"></i> Sobreasignado</li>
+  </ul>
+
+  @if (error(); as e) {
+    <p-message severity="error" [text]="e" />
+  } @else if (cargando() && datos().length === 0) {
+    <p-skeleton height="8rem" />
+  } @else if (datos().length === 0) {
+    <p class="gp-vacio">No hay profesionales asignados a este proyecto.</p>
+  } @else {
+    <div class="mapa" role="region" aria-label="Carga semanal por profesional" tabindex="0">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col" class="prof">Profesional</th>
+            @for (s of semanas(); track s) {
+              <th scope="col" [class.hoy]="s === hoySemana()" [attr.aria-label]="'Semana del ' + fmtFecha(s)">{{ fmtCorta(s) }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of datos(); track p.profesionalId) {
+            <tr>
+              <th scope="row" class="prof">
+                {{ p.nombre }}
+                <span class="gp-tenue">{{ p.horasSemanaDisp | number: '1.0-0' }} h/sem</span>
+              </th>
+              @for (s of p.semanas; track s.semana) {
+                <td>
+                  <button
+                    type="button"
+                    class="celda"
+                    [class.sobre]="s.sobreasignada"
+                    [class.sel]="seleccion()?.p === p && seleccion()?.s === s"
+                    [style.background]="fondo(s)"
+                    [style.color]="tinta(s)"
+                    [attr.aria-label]="etiqueta(p, s)"
+                    [title]="etiqueta(p, s)"
+                    (click)="seleccion.set({ p, s })"
+                  >
+                    @if (s.sobreasignada) {
+                      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                    }
+                    {{ s.horas > 0 ? (s.horas | number: '1.0-0') : '' }}
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (seleccion(); as sel) {
+      <div class="detalle" aria-live="polite">
+        <h3>
+          {{ sel.p.nombre }} · semana del {{ fmtFecha(sel.s.semana) }}:
+          <span [class.gp-negativo]="sel.s.sobreasignada">{{ sel.s.horas | number: '1.0-1' }} h de {{ sel.s.disponibles | number: '1.0-0' }} h</span>
+        </h3>
+        @if (sel.s.aportes.length === 0) {
+          <p class="gp-tenue">Sin actividades esa semana.</p>
+        } @else {
+          <ul>
+            @for (a of sel.s.aportes; track a.actividadId) {
+              <li>
+                <span>{{ a.actividad }}</span>
+                <span class="gp-tenue">{{ a.proyecto }}</span>
+                <strong>{{ a.horas | number: '1.0-1' }} h</strong>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    } @else {
+      <p class="gp-nota">Elige una celda para ver qué actividades suman esas horas.</p>
+    }
+  }
+</section>

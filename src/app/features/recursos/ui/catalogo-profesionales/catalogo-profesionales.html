@@ -1,0 +1,140 @@
+<section class="gp-seccion">
+  <div class="gp-seccion-cabecera">
+    <div>
+      <h2>Profesionales</h2>
+      <p>Catálogo común a todos los proyectos. El valor hora se usa por defecto al asignarlos.</p>
+    </div>
+    <p-button label="Nuevo profesional" icon="pi pi-plus" (onClick)="abrirProf(null)" />
+  </div>
+  <p-table [value]="profesionales()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '820px' }" dataKey="id">
+    <ng-template #header>
+      <tr>
+        <th>Nombre</th>
+        <th>Especialidad</th>
+        <th>Tipo</th>
+        <th class="num">Valor hora</th>
+        <th class="num">h/semana</th>
+        <th>Estado</th>
+        <th><span class="sr-only">Acciones</span></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-p>
+      <tr>
+        <td>{{ p.nombre }}</td>
+        <td>{{ p.especialidad }}</td>
+        <td>{{ p.tipoProfesional ?? '—' }}</td>
+        <td class="num">{{ p.valorHora | clp }}</td>
+        <td class="num">{{ p.horasSemanaDisp }}</td>
+        <td><gp-status-badge [tono]="p.activo ? 'ok' : 'neutral'">{{ p.activo ? 'Activo' : 'Inactivo' }}</gp-status-badge></td>
+        <td>
+          <div class="gp-acciones-fila">
+            <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar ' + p.nombre" (onClick)="abrirProf(p)" />
+            <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" [ariaLabel]="'Eliminar ' + p.nombre" (onClick)="eliminarProf(p)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<section class="gp-seccion">
+  <div class="gp-seccion-cabecera">
+    <div>
+      <h2>Tipos de profesional</h2>
+      <p>Categorías para los requerimientos de personal, con su tarifa hora de referencia.</p>
+    </div>
+    <p-button label="Nuevo tipo" icon="pi pi-plus" [outlined]="true" (onClick)="abrirTipo(null)" />
+  </div>
+  <p-table [value]="tipos()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '520px' }" dataKey="id">
+    <ng-template #header>
+      <tr>
+        <th>Categoría</th>
+        <th class="num">Tarifa hora de referencia</th>
+        <th class="num">Profesionales</th>
+        <th><span class="sr-only">Acciones</span></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-t>
+      <tr>
+        <td>{{ t.categoria }}</td>
+        <td class="num">{{ t.tarifaHoraRef | clp }}</td>
+        <td class="num">{{ t.profesionales }}</td>
+        <td>
+          <div class="gp-acciones-fila">
+            <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar ' + t.categoria" (onClick)="abrirTipo(t)" />
+            <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" [ariaLabel]="'Eliminar ' + t.categoria" (onClick)="eliminarTipo(t)" />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<p-dialog [header]="profEditando() ? 'Editar profesional' : 'Nuevo profesional'" [visible]="dlgProf()" (visibleChange)="dlgProf.set($event)" [modal]="true" [draggable]="false" [style]="{ width: 'min(620px, calc(100vw - 32px))' }">
+  <form class="gp-form" id="form-prof" (ngSubmit)="guardarProf()">
+    <div class="gp-campo">
+      <label for="pf-nom">Nombre</label>
+      <input pInputText id="pf-nom" name="nombre" [(ngModel)]="fp.nombre" maxlength="120" required />
+      @if (errores()['nombre']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="pf-esp">Especialidad</label>
+      <input pInputText id="pf-esp" name="especialidad" [(ngModel)]="fp.especialidad" maxlength="120" required />
+    </div>
+    <div class="gp-campo">
+      <label for="pf-tipo">Tipo de profesional</label>
+      <p-select inputId="pf-tipo" name="tipo" [options]="opcionesTipos()" optionLabel="label" optionValue="value" [(ngModel)]="fp.tipoProfesionalId" appendTo="body" />
+    </div>
+    <div class="gp-campo">
+      <label for="pf-usr">Usuario del sistema</label>
+      <p-select inputId="pf-usr" name="usuario" [options]="usuarios()" optionLabel="label" optionValue="value" [(ngModel)]="fp.usuarioId" appendTo="body" />
+    </div>
+    <div class="gp-campo">
+      <label for="pf-vh">Valor hora (CLP)</label>
+      <p-inputnumber inputId="pf-vh" name="valorHora" [(ngModel)]="fp.valorHora" mode="currency" currency="CLP" locale="es-CL" [min]="0" [maxFractionDigits]="0" />
+      @if (errores()['valorHora']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="pf-hs">Horas disponibles por semana</label>
+      <p-inputnumber inputId="pf-hs" name="horas" [(ngModel)]="fp.horasSemanaDisp" [min]="1" [max]="80" suffix=" h" />
+    </div>
+    @if (profEditando()) {
+      <div class="gp-campo">
+        <label for="pf-act">Activo</label>
+        <p-toggleswitch inputId="pf-act" name="activo" [(ngModel)]="fp.activo" />
+      </div>
+    }
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="dlgProf.set(false)" />
+      <p-button label="Guardar" icon="pi pi-check" type="submit" form="form-prof" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog [header]="tipoEditando() ? 'Editar tipo' : 'Nuevo tipo de profesional'" [visible]="dlgTipo()" (visibleChange)="dlgTipo.set($event)" [modal]="true" [draggable]="false" [style]="{ width: 'min(480px, calc(100vw - 32px))' }">
+  <form class="gp-form" id="form-tipo" (ngSubmit)="guardarTipo()">
+    <div class="gp-campo gp-completo">
+      <label for="tp-cat">Categoría</label>
+      <input pInputText id="tp-cat" name="categoria" [(ngModel)]="ft.categoria" maxlength="80" required />
+      @if (errores()['categoria']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="tp-tar">Tarifa hora de referencia (CLP)</label>
+      <p-inputnumber inputId="tp-tar" name="tarifa" [(ngModel)]="ft.tarifaHoraRef" mode="currency" currency="CLP" locale="es-CL" [min]="0" [maxFractionDigits]="0" />
+    </div>
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="dlgTipo.set(false)" />
+      <p-button label="Guardar" icon="pi pi-check" type="submit" form="form-tipo" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>

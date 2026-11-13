@@ -1,4 +1,4 @@
-import { SlicePipe } from '@angular/common';
+import { SlicePipe, DecimalPipe } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -94,7 +94,7 @@ export interface Tooltip {
  */
 @Component({
   selector: 'gp-gantt-chart',
-  imports: [SlicePipe],
+  imports: [DecimalPipe, SlicePipe],
   templateUrl: './gantt-chart.html',
   styleUrl: './gantt-chart.scss',
 })

@@ -1,0 +1,26 @@
+.filtros {
+  margin-bottom: var(--gp-space-3);
+}
+
+.nombre {
+  color: var(--gp-text);
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--gp-accent);
+    text-decoration: underline;
+  }
+}
+
+.etapa {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 170px;
+  font-size: var(--gp-text-sm);
+
+  ::ng-deep .p-progressbar {
+    height: 4px;
+  }
+}

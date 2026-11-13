@@ -408,3 +408,19 @@ td.num {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.edt {
+  flex: none;
+  min-width: 2.5em;
+  color: var(--gp-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.costo {
+  font-size: var(--gp-text-sm);
+  font-variant-numeric: tabular-nums;
+
+  &.sobre {
+    color: var(--gp-warn);
+  }
+}

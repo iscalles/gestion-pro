@@ -26,4 +26,18 @@ export class ProyectosService {
   actualizar(id: number, datos: ProyectoRequest): Observable<Proyecto> {
     return this.http.put<Proyecto>(`${this.url}/${id}`, datos);
   }
+
+  /** Cierre formal: sin actividades abiertas ni solicitudes de cambio sin cerrar. */
+  cerrar(id: number, fechaTerminoReal: string | null): Observable<Proyecto> {
+    return this.http.post<Proyecto>(`${this.url}/${id}/cerrar`, { fechaTerminoReal });
+  }
+
+  /** Solo proyectos planificados. */
+  eliminar(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id}`);
+  }
+
+  calendarios(): Observable<{ id: number; nombre: string }[]> {
+    return this.http.get<{ id: number; nombre: string }[]>(`${environment.apiUrl}/calendarios`);
+  }
 }

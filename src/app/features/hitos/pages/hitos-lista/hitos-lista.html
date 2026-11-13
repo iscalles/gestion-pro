@@ -1,0 +1,304 @@
+<p-toast position="bottom-right" />
+<p-confirmdialog [style]="{ width: 'min(460px, calc(100vw - 32px))' }" />
+
+<div class="gp-pagina">
+  <gp-page-header titulo="Hitos" descripcion="Puntos de control con fecha comprometida, criterios de aceptación, evidencias y KPI asociados.">
+    @if (ctx.proyectoId() != null) {
+      <p-button label="Nuevo hito" icon="pi pi-plus" (onClick)="abrir(null)" />
+    }
+  </gp-page-header>
+
+  @if (ctx.cargando()) {
+    <div class="panel gp-estado-carga" aria-busy="true">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="1.75rem" />
+      }
+    </div>
+  } @else if (ctx.proyectos().length === 0) {
+    <div class="panel gp-vacio">
+      @if (ctx.error(); as e) {
+        <p-message severity="error" [text]="e" />
+        <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="ctx.recargar()" />
+      } @else {
+        <p>Todavía no tienes proyectos asignados.</p>
+      }
+    </div>
+  } @else {
+    <div class="gp-barra">
+      <gp-selector-proyecto [ctx]="ctx" />
+    </div>
+
+    <dl class="gp-cifras">
+      <div class="gp-cifra">
+        <dt>Hitos cumplidos</dt>
+        <dd>{{ resumen().cumplidos }} <span class="gp-tenue">de {{ resumen().total }}</span></dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Cumplidos en plazo</dt>
+        <dd>{{ resumen().enPlazo == null ? '—' : resumen().enPlazo + ' %' }}</dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Atrasados</dt>
+        <dd [class.gp-negativo]="resumen().atrasados > 0">{{ resumen().atrasados }}</dd>
+        <span class="gp-cifra-nota">Pendientes con la fecha comprometida vencida</span>
+      </div>
+      <div class="gp-cifra">
+        <dt>En riesgo</dt>
+        <dd [class.gp-negativo]="resumen().enRiesgo > 0">{{ resumen().enRiesgo }}</dd>
+        <span class="gp-cifra-nota">Sus actividades terminan después de lo comprometido</span>
+      </div>
+    </dl>
+
+    <section class="panel">
+      @if (error(); as e) {
+        <div class="gp-estado-carga">
+          <p-message severity="error" [text]="e" />
+          <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar(ctx.proyectoId()!)" />
+        </div>
+      } @else if (cargando() && hitos().length === 0) {
+        <div class="gp-estado-carga" aria-busy="true">
+          @for (i of [1, 2, 3]; track i) {
+            <p-skeleton height="1.75rem" />
+          }
+        </div>
+      } @else {
+        <p-table [value]="hitos()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '1000px' }" dataKey="id">
+          <ng-template #header>
+            <tr>
+              <th>Código</th>
+              <th>Hito</th>
+              <th>Comprometida</th>
+              <th>Prevista / real</th>
+              <th>Criterios</th>
+              <th>KPI</th>
+              <th>Estado</th>
+              <th><span class="sr-only">Acciones</span></th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-h>
+            <tr class="gp-clic" [class.gp-fila-sel]="h.id === seleccionId()" (click)="seleccionId.set(h.id)">
+              <td class="gp-codigo">{{ h.codigo }}</td>
+              <td>
+                <button type="button" class="enlace" (click)="seleccionId.set(h.id); $event.stopPropagation()" [attr.aria-pressed]="h.id === seleccionId()">{{ h.descripcion }}</button>
+                <br /><span class="gp-tenue">{{ h.responsable }}</span>
+              </td>
+              <td class="gp-fecha">{{ h.fechaComprometida | date: 'dd-MM-yyyy' }}</td>
+              <td class="gp-fecha">
+                @if (h.fechaReal) {
+                  Real {{ h.fechaReal | date: 'dd-MM-yyyy' }}
+                } @else if (h.fechaPrevista) {
+                  <span [class.gp-negativo]="h.enRiesgo">
+                    @if (h.enRiesgo) {
+                      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                    }
+                    {{ h.fechaPrevista | date: 'dd-MM-yyyy' }}
+                  </span>
+                  @if (h.enRiesgo) {
+                    <span class="sr-only">(en riesgo)</span>
+                  }
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                <div class="gp-avance">
+                  <p-progressbar [value]="h.criterios.length ? (h.criteriosCumplidos / h.criterios.length) * 100 : 0" [showValue]="false" [attr.aria-label]="h.criteriosCumplidos + ' de ' + h.criterios.length + ' criterios'" />
+                  <span>{{ h.criteriosCumplidos }}/{{ h.criterios.length }}</span>
+                </div>
+              </td>
+              <td>
+                @for (k of h.kpis; track k.id) {
+                  <span class="kpi-mini" [pTooltip]="k.codigo + ' · ' + k.nombre + ': ' + fmtKpi(k.valor, k.unidad) + ' (' + semaforoTexto(k.semaforo) + ')'">
+                    <gp-status-badge [tono]="semaforoTono(k.semaforo)">{{ k.codigo }}<span class="sr-only">: {{ semaforoTexto(k.semaforo) }}</span></gp-status-badge>
+                  </span>
+                } @empty {
+                  <span class="gp-tenue">—</span>
+                }
+              </td>
+              <td><gp-status-badge [tono]="estado(h).tono">{{ estado(h).etiqueta }}</gp-status-badge></td>
+              <td>
+                <div class="gp-acciones-fila">
+                  <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar ' + h.codigo" (onClick)="abrir(h); $event.stopPropagation()" />
+                  <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" [ariaLabel]="'Eliminar ' + h.codigo" (onClick)="eliminar(h); $event.stopPropagation()" />
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="8" class="gp-vacio">Este proyecto aún no tiene hitos.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </section>
+
+    @if (seleccion(); as h) {
+      <section class="panel detalle" aria-live="polite">
+        <div class="gp-seccion gp-seccion-cabecera cab">
+          <div>
+            <h2><span class="gp-codigo">{{ h.codigo }}</span> {{ h.descripcion }}</h2>
+            <p>
+              Responsable {{ h.responsable }} · comprometido para el {{ h.fechaComprometida | date: 'dd-MM-yyyy' }}
+              @if (h.fechaReal) {
+                · cumplido el {{ h.fechaReal | date: 'dd-MM-yyyy' }} ({{ h.cumplidoEnPlazo ? 'en plazo' : 'fuera de plazo' }})
+              }
+            </p>
+          </div>
+          <div class="gp-acciones-fila">
+            @if (h.estado === 'PENDIENTE') {
+              <p-button
+                label="Marcar cumplido"
+                icon="pi pi-check"
+                (onClick)="abrirCumplir(h)"
+                [disabled]="h.criteriosCumplidos < h.criterios.length"
+                [pTooltip]="h.criteriosCumplidos < h.criterios.length ? 'Primero cumple todos los criterios de aceptación' : ''"
+              />
+            } @else if (h.estado === 'CUMPLIDO') {
+              <p-button label="Volver a pendiente" icon="pi pi-undo" [outlined]="true" (onClick)="reabrir(h)" />
+            }
+            <p-button label="Editar" icon="pi pi-pencil" [outlined]="true" (onClick)="abrir(h)" />
+          </div>
+        </div>
+        <div class="gp-rejilla rejilla">
+          <section class="gp-seccion">
+            <h3>Criterios de aceptación</h3>
+            @if (h.criterios.length === 0) {
+              <p class="gp-tenue">Sin criterios definidos.</p>
+            } @else {
+              <ul class="criterios">
+                @for (c of h.criterios; track c.id) {
+                  <li>
+                    <p-checkbox
+                      [inputId]="'cr-' + c.id"
+                      [binary]="true"
+                      [ngModel]="c.cumplido"
+                      (ngModelChange)="marcar(h, c.id, $event)"
+                      [disabled]="h.estado !== 'PENDIENTE'"
+                    />
+                    <label [for]="'cr-' + c.id" [class.hecho]="c.cumplido">{{ c.descripcion }}</label>
+                  </li>
+                }
+              </ul>
+            }
+            <h3 class="sub">Actividades asociadas</h3>
+            @if (h.actividades.length === 0) {
+              <p class="gp-tenue">Sin actividades asociadas: la fecha prevista no se calcula.</p>
+            } @else {
+              <ul class="lista">
+                @for (a of h.actividades; track $index) {
+                  <li>{{ a }}</li>
+                }
+              </ul>
+            }
+          </section>
+          <section class="gp-seccion">
+            <h3>KPI vinculados</h3>
+            @if (h.kpis.length === 0) {
+              <p class="gp-tenue">Ningún KPI vinculado.</p>
+            } @else {
+              <ul class="kpis">
+                @for (k of h.kpis; track k.id) {
+                  <li>
+                    <span><span class="gp-codigo">{{ k.codigo }}</span> {{ k.nombre }}</span>
+                    <strong>{{ fmtKpi(k.valor, k.unidad) }}</strong>
+                    <gp-semaforo [valor]="k.semaforo" />
+                  </li>
+                }
+              </ul>
+            }
+            <div class="sub">
+              <gp-evidencias [evidencias]="h.evidencias" [urlSubida]="urlEvidencias(h)" (cambio)="cargar(ctx.proyectoId()!)" />
+            </div>
+          </section>
+        </div>
+      </section>
+    }
+  }
+</div>
+
+<p-dialog [header]="editando() ? 'Editar ' + editando()!.codigo : 'Nuevo hito'" [visible]="dialogo()" (visibleChange)="dialogo.set($event)" [modal]="true" [draggable]="false" [style]="{ width: 'min(760px, calc(100vw - 32px))' }">
+  <form class="gp-form" id="form-hito" (ngSubmit)="guardar()">
+    <div class="gp-campo">
+      <label for="h-cod">Código</label>
+      <input pInputText id="h-cod" name="codigo" [(ngModel)]="form.codigo" maxlength="10" required />
+      @if (errores()['codigo']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="h-resp">Responsable</label>
+      <p-select inputId="h-resp" name="responsableId" [options]="opcionesResponsables()" optionLabel="label" optionValue="value" [(ngModel)]="form.responsableId" [filter]="true" placeholder="Elige un profesional" appendTo="body" />
+      @if (errores()['responsableId']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="h-desc">Descripción</label>
+      <input pInputText id="h-desc" name="descripcion" [(ngModel)]="form.descripcion" maxlength="200" required />
+      @if (errores()['descripcion']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="h-fc">Fecha comprometida</label>
+      <input pInputText type="date" id="h-fc" name="fechaComprometida" [(ngModel)]="form.fechaComprometida" required />
+      @if (errores()['fechaComprometida']; as e) { <p class="gp-error-campo">{{ e }}</p> }
+    </div>
+    <div class="gp-campo">
+      <label for="h-est">Estado</label>
+      <p-select inputId="h-est" name="estado" [options]="opcionesEstado" optionLabel="label" optionValue="value" [(ngModel)]="form.estado" appendTo="body" />
+    </div>
+    @if (form.estado === 'CUMPLIDO') {
+      <div class="gp-campo">
+        <label for="h-fr">Fecha real</label>
+        <input pInputText type="date" id="h-fr" name="fechaReal" [(ngModel)]="form.fechaReal" [max]="hoy" />
+      </div>
+    }
+    <div class="gp-campo gp-completo">
+      <label for="h-act">Actividades asociadas</label>
+      <p-multiselect inputId="h-act" name="actividadIds" [options]="opcionesActividades()" optionLabel="label" optionValue="value" [(ngModel)]="form.actividadIds" [filter]="true" display="chip" placeholder="Ninguna" appendTo="body" />
+      <p class="gp-ayuda">El hito se prevé para el término más tardío de estas actividades.</p>
+    </div>
+    <div class="gp-campo gp-completo">
+      <label for="h-kpi">KPI vinculados</label>
+      <p-multiselect inputId="h-kpi" name="kpiIds" [options]="opcionesKpi()" optionLabel="label" optionValue="value" [(ngModel)]="form.kpiIds" [filter]="true" display="chip" placeholder="Ninguno" appendTo="body" />
+    </div>
+    <fieldset class="gp-completo criterios-form">
+      <legend>Criterios de aceptación</legend>
+      @for (c of form.criterios; track $index; let i = $index) {
+        <div class="fila-criterio">
+          <p-checkbox [inputId]="'fc-' + i" [name]="'cc' + i" [binary]="true" [(ngModel)]="c.cumplido" [ariaLabel]="'Criterio ' + (i + 1) + ' cumplido'" />
+          <input pInputText [name]="'cd' + i" [(ngModel)]="c.descripcion" maxlength="300" [attr.aria-label]="'Criterio ' + (i + 1)" placeholder="Ej.: Acta firmada por el cliente" />
+          <p-button icon="pi pi-times" [text]="true" severity="secondary" [ariaLabel]="'Quitar criterio ' + (i + 1)" (onClick)="quitarCriterio(i)" />
+        </div>
+      }
+      <p-button label="Agregar criterio" icon="pi pi-plus" [text]="true" size="small" (onClick)="agregarCriterio()" />
+    </fieldset>
+  </form>
+  @if (errorForm(); as e) {
+    <p-message severity="error" [text]="e" styleClass="gp-msg" />
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="dialogo.set(false)" />
+      <p-button [label]="editando() ? 'Guardar cambios' : 'Crear hito'" icon="pi pi-check" type="submit" form="form-hito" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog header="Marcar hito cumplido" [visible]="cumplir() !== null" (visibleChange)="!$event && cumplir.set(null)" [modal]="true" [draggable]="false" [style]="{ width: 'min(440px, calc(100vw - 32px))' }">
+  @if (cumplir(); as h) {
+    <p class="texto">
+      <strong>{{ h.codigo }} · {{ h.descripcion }}</strong> quedará cumplido. Se compara la fecha real con la comprometida
+      ({{ h.fechaComprometida | date: 'dd-MM-yyyy' }}).
+    </p>
+    <div class="gp-campo">
+      <label for="cu-fecha">Fecha real</label>
+      <input pInputText type="date" id="cu-fecha" [(ngModel)]="fechaCumplido" [max]="hoy" />
+    </div>
+    @if (errorCumplir(); as e) {
+      <p-message severity="error" [text]="e" styleClass="gp-msg" />
+    }
+  }
+  <ng-template #footer>
+    <div class="gp-pie-dialogo">
+      <p-button label="Cancelar" [outlined]="true" (onClick)="cumplir.set(null)" />
+      <p-button label="Marcar cumplido" icon="pi pi-check" (onClick)="confirmarCumplir()" [loading]="guardando()" />
+    </div>
+  </ng-template>
+</p-dialog>

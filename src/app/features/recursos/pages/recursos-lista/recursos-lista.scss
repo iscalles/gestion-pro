@@ -1,0 +1,25 @@
+.graficos {
+  margin: 0;
+}
+
+.borde {
+  border-top: 1px solid var(--gp-line);
+}
+
+.sangria {
+  display: inline-block;
+}
+
+.aviso {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: var(--gp-radius-sm);
+  background: var(--gp-warn-soft);
+  color: var(--gp-warn);
+  font-size: var(--gp-text-xs);
+}
+
+:host ::ng-deep .p-tab i {
+  margin-right: 4px;
+  font-size: 0.85rem;
+}
