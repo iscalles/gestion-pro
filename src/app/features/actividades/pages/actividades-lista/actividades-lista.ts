@@ -1,9 +1,8 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -18,6 +17,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
+import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
 import { ClpPipe } from '../../../../shared/pipes/clp.pipe';
 import { proyectoPreferido, recordarProyecto } from '../../../../shared/util/contexto-proyecto';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -38,11 +38,11 @@ import { CalendarioLaboral } from '../../ui/calendario-laboral/calendario-labora
 
 @Component({
   selector: 'gp-actividades-lista',
-  imports: [DecimalPipe, 
+  imports: [DecimalPipe,
     DatePipe,
+    NgTemplateOutlet,
     RouterLink,
     FormsModule,
-    TableModule,
     ButtonModule,
     SelectModule,
     ProgressBarModule,
@@ -56,6 +56,7 @@ import { CalendarioLaboral } from '../../ui/calendario-laboral/calendario-labora
     ConfirmDialogModule,
     TooltipModule,
     PageHeader,
+    Resaltar,
     ClpPipe,
     DetalleActividad,
     CalendarioLaboral,
@@ -230,6 +231,56 @@ export class ActividadesLista {
   protected seleccionar(a: Actividad): void {
     this.seleccionId.set(a.id);
     this.pestana.set('detalle');
+  }
+
+  // ------------------------------------------------------------- movimiento (solo visual)
+
+  /** Forma del esqueleto de carga: nivel de sangría y largo del nombre (%). */
+  protected readonly esqueleto = [
+    { nivel: 0, largo: 34 },
+    { nivel: 1, largo: 58 },
+    { nivel: 2, largo: 50 },
+    { nivel: 2, largo: 64 },
+    { nivel: 1, largo: 46 },
+    { nivel: 0, largo: 30 },
+    { nivel: 1, largo: 54 },
+  ];
+
+  private filasPrevias: { lista: Actividad[]; ids: Set<number> } | null = null;
+
+  /**
+   * Compara las filas visibles con las del render anterior. Si solo cambió el plegado (mismos datos),
+   * las filas nuevas entran escalonadas (12 ms entre filas, tope de 150 ms) y las que se van se
+   * desvanecen. La carga, los recálculos y el cambio de proyecto no animan filas. Se lee en cada render
+   * desde la plantilla, así la comparación siempre queda al día.
+   */
+  private readonly movimiento = computed(() => {
+    const lista = this.actividades();
+    const filas = this.filas();
+    const previas = this.filasPrevias;
+    this.filasPrevias = { lista, ids: new Set(filas.map((a) => a.id)) };
+    const entradas = new Map<number, number>();
+    const plegado = previas?.lista === lista;
+    if (previas && plegado) {
+      let i = 0;
+      // Tope de 40 filas animadas: con «Expandir todo» en un proyecto grande el resto aparece directo
+      for (const a of filas)
+        if (!previas.ids.has(a.id) && i < 40) entradas.set(a.id, Math.min(i++ * 12, 150));
+    }
+    return { entradas, plegado };
+  });
+
+  protected claseEntrada(id: number): string {
+    return this.movimiento().entradas.has(id) ? 'gp-anim-fila' : '';
+  }
+
+  protected retrasoEntrada(id: number): string | null {
+    const ms = this.movimiento().entradas.get(id);
+    return ms == null ? null : `${ms}ms`;
+  }
+
+  protected claseSalida(): string {
+    return this.movimiento().plegado ? 'fila-sale' : '';
   }
 
   protected cantidadDescendientes(a: Actividad): number {

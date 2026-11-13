@@ -8,10 +8,9 @@
 .gantt {
   position: relative;
   overflow: auto;
-  max-height: calc(100vh - 260px);
+  max-height: max(360px, calc(100vh - 300px));
   min-height: 320px;
   background: var(--gp-surface);
-  border-radius: var(--gp-radius-md);
   overscroll-behavior: contain;
 }
 
@@ -19,7 +18,7 @@
   position: relative;
 }
 
-// ---------------------------------------------------------------- cabecera
+// ---------------------------------------------------------------- cabecera (sin fondo propio: papel y una línea)
 
 .cabecera {
   display: flex;
@@ -27,7 +26,7 @@
   top: 0;
   z-index: 3;
   height: 52px;
-  background: var(--gp-canvas);
+  background: var(--gp-surface);
   border-bottom: 1px solid var(--gp-line-strong);
 }
 
@@ -38,25 +37,31 @@
   display: flex;
   align-items: flex-end;
   flex: 0 0 var(--ancho-grilla);
+  // Ancho fijo: los nombres largos se recortan con «…» y la grilla queda alineada con la cabecera
   width: var(--ancho-grilla);
-  padding: 0 0 8px;
-  background: var(--gp-canvas);
+  min-width: 0;
+  padding-bottom: 8px;
+  background: var(--gp-surface);
   border-right: 1px solid var(--gp-line-strong);
   color: var(--gp-text-muted);
   font-size: var(--gp-text-sm);
   font-weight: 500;
+
+  .c-nombre {
+    padding-left: 12px;
+  }
 }
 
 .escala {
   position: relative;
-  flex: 0 0 auto;
+  flex: none;
 }
 
 .nivel {
   position: relative;
   height: 26px;
 
-  & + .nivel {
+  & + & {
     border-top: 1px solid var(--gp-line);
   }
 }
@@ -86,26 +91,26 @@
   }
 
   &.tenue {
-    color: #7a9193;
-    background: rgba(12, 49, 51, 0.03);
+    color: var(--gp-text-subtle);
+    background: var(--gp-canvas);
   }
 }
 
 .etiqueta-hoy {
   position: absolute;
-  top: 3px;
+  top: 4px;
   transform: translateX(-50%);
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--gp-sidebar);
-  color: var(--gp-text-on-dark);
+  padding: 0 6px;
+  border-radius: var(--gp-radius-sm);
+  background: var(--gp-accent);
+  color: var(--gp-surface);
   font-size: 11px;
   font-weight: 700;
   line-height: 18px;
   pointer-events: none;
 }
 
-// ---------------------------------------------------------------- cuerpo
+// ---------------------------------------------------------------- grilla fija a la izquierda
 
 .cuerpo {
   display: flex;
@@ -117,7 +122,9 @@
   left: 0;
   z-index: 2;
   flex: 0 0 var(--ancho-grilla);
+  // Ancho fijo: los nombres largos se recortan con «…» y la grilla queda alineada con la cabecera
   width: var(--ancho-grilla);
+  min-width: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -132,18 +139,21 @@
   border-bottom: 1px solid var(--gp-line);
   font-size: var(--gp-text-sm);
 
-  &.etapa,
-  &.grupo {
-    background: var(--gp-surface-sunken);
+  // Las etapas y el grupo de hitos se separan con una línea más firme, no con una caja
+  &:has(+ .etapa, + .grupo) {
+    border-bottom-color: var(--gp-line-strong);
   }
 
   &.resaltada {
-    background: var(--gp-canvas);
+    background: var(--gp-hover);
   }
 
   &.seleccionada {
     background: var(--gp-accent-soft);
-    box-shadow: inset 3px 0 0 var(--gp-accent);
+
+    .nombre {
+      color: var(--gp-accent-hover);
+    }
   }
 }
 
@@ -155,14 +165,10 @@
   padding-right: 8px;
 }
 
-.esquina .c-nombre {
-  padding-left: 12px;
-}
-
 .c-fecha,
 .c-avance,
 .c-estado {
-  flex: 0 0 auto;
+  flex: none;
   font-variant-numeric: tabular-nums;
   color: var(--gp-text-muted);
 }
@@ -172,18 +178,30 @@
 }
 
 .c-avance {
-  width: 56px;
+  width: 60px;
   padding-right: 12px;
   text-align: right;
+  color: var(--gp-text);
+
+  .gp-unidad {
+    margin-left: 1px;
+    font-size: 0.85em;
+  }
 }
 
 .c-estado {
-  width: 120px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 128px;
   padding-right: 12px;
-  text-align: right;
   font-size: var(--gp-text-xs);
   font-weight: 700;
 
+  i {
+    font-size: 0.75rem;
+  }
   &.e-cumplido {
     color: var(--gp-ok);
   }
@@ -200,16 +218,15 @@
 
 .plegar,
 .plegar-espacio {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 24px;
+  height: 24px;
+  margin-left: 6px;
 }
 
 .plegar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 4px;
   border: 0;
   border-radius: var(--gp-radius-sm);
   background: none;
@@ -217,17 +234,18 @@
   cursor: pointer;
 
   &:hover {
-    background: var(--gp-line);
+    background: var(--gp-surface-sunken);
     color: var(--gp-text);
-  }
-
-  i {
-    font-size: 0.7rem;
   }
 }
 
-.plegar-espacio {
-  margin-left: 4px;
+.chevron {
+  font-size: 0.7rem;
+  transition: transform var(--gp-dur-fast) var(--gp-ease-out);
+
+  &.abierto {
+    transform: rotate(90deg);
+  }
 }
 
 .nombre {
@@ -235,7 +253,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-  min-height: 30px;
+  min-height: 28px;
   padding: 0 4px;
   border: 0;
   border-radius: var(--gp-radius-sm);
@@ -247,6 +265,7 @@
 
   &:hover .texto {
     text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 }
 
@@ -259,9 +278,11 @@
 .padre .nombre {
   font-weight: 500;
 }
+
 .etapa .nombre,
 .grupo-texto {
   font-weight: 700;
+  font-size: var(--gp-text-md);
 }
 
 .grupo-texto {
@@ -280,68 +301,73 @@
 }
 
 .atraso {
+  flex: none;
   color: var(--gp-danger);
   font-size: 0.8rem;
 }
 
-// ---------------------------------------------------------------- SVG
+// ---------------------------------------------------------------- línea de tiempo (SVG)
 
 .linea-tiempo {
   display: block;
-  flex: 0 0 auto;
+  flex: none;
   overflow: visible;
   font-family: var(--gp-font);
 }
 
-.fondo-etapa {
-  fill: var(--gp-surface-sunken);
-}
 .fondo-seleccion {
   fill: var(--gp-accent-soft);
 }
 .fondo-hover {
-  fill: var(--gp-canvas);
-}
-.no-laborable {
-  fill: rgba(12, 49, 51, 0.045);
-}
-.feriado-fondo {
-  fill: rgba(138, 83, 0, 0.06);
-}
-.feriado-raya {
-  stroke: rgba(138, 83, 0, 0.22);
-  stroke-width: 1.5;
-}
-.division {
-  stroke: var(--gp-line);
-  stroke-width: 1;
-  shape-rendering: crispEdges;
-}
-.linea-fila {
-  stroke: var(--gp-line);
-  stroke-width: 1;
-  shape-rendering: crispEdges;
-}
-.hoy {
-  stroke: var(--gp-sidebar);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
+  fill: var(--gp-hover);
 }
 
+// Fines de semana y feriados: un sombreado muy suave
+.no-laborable {
+  fill: var(--gp-surface-sunken);
+  fill-opacity: 0.6;
+}
+.feriado {
+  fill: url(#gp-feriado);
+}
+.feriado-fondo {
+  fill: var(--gp-surface-sunken);
+  fill-opacity: 0.6;
+}
+.feriado-raya {
+  stroke: var(--gp-line-strong);
+  stroke-width: 1;
+}
+
+.division,
+.linea-fila,
+.linea-etapa {
+  stroke: var(--gp-line);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.linea-etapa {
+  stroke: var(--gp-line-strong);
+}
+
+.hoy {
+  stroke: var(--gp-accent);
+  stroke-width: 1.5;
+}
+
+// Dependencias: tinta tenue de 1 px; resaltado inmediato (sin transición) en turquesa
 .vinculo {
   fill: none;
-  stroke: var(--gp-data);
-  stroke-width: 1.25;
-  opacity: 0.75;
+  stroke: var(--gp-text-subtle);
+  stroke-width: 1;
 
   &.activo {
     stroke: var(--gp-accent);
-    stroke-width: 2;
-    opacity: 1;
+    stroke-width: 1.75;
   }
 }
 .punta {
-  fill: var(--gp-data);
+  fill: var(--gp-text-subtle);
 
   &.activa {
     fill: var(--gp-accent);
@@ -355,77 +381,83 @@
     fill: transparent;
   }
 
-  &.hoja {
-    .plan {
-      fill: var(--gp-accent-soft);
-    }
-    .progreso {
-      fill: var(--gp-accent);
-    }
-    .borde {
-      fill: none;
-      stroke: var(--gp-data);
-      stroke-width: 1;
-    }
-  }
-
-  &.resumen {
-    .plan {
-      fill: var(--gp-line-strong);
-    }
-    .progreso {
-      fill: var(--gp-sidebar);
-    }
-    .tope {
-      fill: var(--gp-sidebar);
-    }
-  }
-
-  &.atrasada .borde {
-    stroke: var(--gp-danger);
-    stroke-width: 1.5;
-  }
-
-  &.seleccionada .borde {
-    stroke: var(--gp-sidebar);
-    stroke-width: 2;
-  }
-
-  &:hover .borde {
-    stroke-width: 2;
-  }
-
   .real {
-    fill: var(--gp-sidebar);
+    fill: var(--gp-real);
 
+    &.en-curso {
+      fill: url(#gp-en-curso);
+    }
     &.desviada {
       fill: var(--gp-warn);
     }
   }
+}
 
-  .marca-atraso {
-    fill: var(--gp-danger);
+.hoja {
+  .plan {
+    fill: var(--gp-plan-soft);
+  }
+  .progreso {
+    fill: var(--gp-plan);
+  }
+  .borde {
+    fill: none;
+    stroke: none;
+  }
+  &:hover .borde,
+  &.activa .borde {
+    stroke: var(--gp-plan);
+    stroke-width: 1;
+  }
+  &.atrasada .borde {
+    stroke: var(--gp-danger);
+    stroke-width: 1.5;
+  }
+  &.seleccionada .borde {
+    stroke: var(--gp-accent-hover);
+    stroke-width: 2;
+  }
+}
+
+// Barras resumen: una línea fina en tinta con topes
+.resumen {
+  .plan {
+    fill: var(--gp-line-strong);
+  }
+  .progreso,
+  .tope {
+    fill: var(--gp-text);
   }
 }
 
 .en-curso-fondo {
-  fill: var(--gp-sidebar);
+  fill: var(--gp-real);
 }
 .en-curso-raya {
-  stroke: #6b8a8c;
-  stroke-width: 3;
+  stroke: var(--gp-real-soft);
+  stroke-width: 2;
+}
+
+.icono-atraso {
+  .fondo {
+    fill: var(--gp-danger);
+  }
+  .signo {
+    fill: var(--gp-surface);
+  }
+}
+
+.etiquetas {
+  pointer-events: none;
 }
 
 .texto-avance {
   font-size: 11px;
   fill: var(--gp-text-muted);
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
 }
 
 .hito {
-  cursor: default;
-
   .zona {
     fill: transparent;
   }
@@ -450,7 +482,7 @@
   }
   .check {
     fill: none;
-    stroke: #fff;
+    stroke: var(--gp-surface);
     stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -479,17 +511,44 @@
   }
 }
 
-// ---------------------------------------------------------------- tooltip
+// ---------------------------------------------------------------- movimiento
+// Primera carga: cada fila se despliega desde su inicio (≤ 400 ms con el escalonado) y después
+// aparecen flechas, etiquetas e hitos con un fundido (todo termina a los 500 ms).
+
+.trazo.gp-anim-desplegar-x {
+  animation-duration: calc(var(--gp-dur-dibujo) * 0.56);
+  animation-delay: var(--retraso, 0ms);
+}
+
+.capa.gp-anim-aparecer {
+  animation-duration: var(--gp-dur-fast);
+  animation-delay: calc(var(--gp-dur-dibujo) * 0.68);
+}
+
+// Al expandir: los hijos bajan desde su padre, 12 ms entre filas
+.gp-anim-fila {
+  animation-delay: var(--retraso, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trazo.gp-anim-desplegar-x,
+  .capa.gp-anim-aparecer,
+  .gp-anim-fila {
+    animation-delay: 0ms;
+  }
+}
+
+// ---------------------------------------------------------------- tooltip (capa flotante: lleva sombra)
 
 .tooltip {
   position: fixed;
   z-index: 1100;
   width: 340px;
   padding: 10px 12px;
-  border: 1px solid var(--gp-line-strong);
+  border: 1px solid var(--gp-line);
   border-radius: var(--gp-radius-md);
   background: var(--gp-surface);
-  box-shadow: 0 8px 24px rgba(12, 49, 51, 0.16);
+  box-shadow: var(--gp-shadow-overlay);
   pointer-events: none;
   font-size: var(--gp-text-sm);
 
@@ -499,6 +558,8 @@
 
   dl {
     margin: 8px 0 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--gp-line);
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -506,12 +567,28 @@
 
   div {
     display: grid;
-    grid-template-columns: 96px 1fr;
+    grid-template-columns: 100px 1fr;
     gap: 8px;
   }
 
   dt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     color: var(--gp-text-muted);
+
+    &.m-plan::before,
+    &.m-real::before {
+      content: '';
+      flex: none;
+      width: 10px;
+      height: 6px;
+      border-radius: 1px;
+      background: var(--gp-plan);
+    }
+    &.m-real::before {
+      background: var(--gp-real);
+    }
   }
 
   dd {
@@ -539,12 +616,20 @@
   color: var(--gp-ok);
 }
 
+@media (max-width: 1100px) {
+  :host {
+    --ancho-grilla: 340px;
+  }
+  .c-avance {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   :host {
     --ancho-grilla: 220px;
   }
   .c-fecha,
-  .c-avance,
   .c-estado {
     display: none;
   }
@@ -553,8 +638,5 @@
 @media (max-width: 640px) {
   :host {
     --ancho-grilla: 160px;
-  }
-  .gantt {
-    max-height: calc(100vh - 200px);
   }
 }

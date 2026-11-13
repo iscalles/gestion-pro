@@ -18,6 +18,7 @@ import {
 } from '../../../actividades/models/planificacion.model';
 import { DiaSemana } from '../../../actividades/models/calendario.model';
 import { ESTADO_HITO, Hito } from '../../../hitos/models/hito.model';
+import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
 import {
   ZOOM,
   Zoom,
@@ -33,6 +34,8 @@ import {
 } from '../../models/gantt.model';
 
 const FILA = 36;
+/** Solo visual: filas que se despliegan en la primera carga (las demás aparecen ya dibujadas). */
+const FILAS_DIBUJO = 32;
 const DOW: Record<DiaSemana, number> = {
   SUNDAY: 0,
   MONDAY: 1,
@@ -94,7 +97,7 @@ export interface Tooltip {
  */
 @Component({
   selector: 'gp-gantt-chart',
-  imports: [DecimalPipe, SlicePipe],
+  imports: [DecimalPipe, SlicePipe, Resaltar],
   templateUrl: './gantt-chart.html',
   styleUrl: './gantt-chart.scss',
 })
@@ -114,6 +117,11 @@ export class GanttChart {
   readonly mostrarReal = input(true);
   readonly mostrarVinculos = input(true);
   readonly seleccionId = input<number | null>(null);
+  /**
+   * Solo visual: primera vez que la pantalla muestra la carta en esta visita. Mientras es true, las barras
+   * que se crean se despliegan de izquierda a derecha y después aparecen flechas, hitos y etiquetas.
+   */
+  readonly primeraCarga = input(false);
 
   readonly seleccionar = output<number>();
 
@@ -401,14 +409,82 @@ export class GanttChart {
     return out.sort((a, b) => Number(a.activo) - Number(b.activo));
   });
 
+  // Geometría de las barras dentro de la fila de 36 px (solo dibujo): plan de 14 px y real de 6 px
+  // debajo (y = 25); las barras resumen son una línea fina de 4 px.
   protected yBarra(a: Actividad): number {
-    if (!a.esHoja) return 12;
-    return this.mostrarReal() ? 7 : 10;
+    if (!a.esHoja) return this.mostrarReal() ? 12 : 15;
+    return this.mostrarReal() ? 8 : 11;
   }
 
   protected altoBarra(a: Actividad): number {
-    if (!a.esHoja) return 8;
-    return this.mostrarReal() ? 14 : 16;
+    return a.esHoja ? 14 : 4;
+  }
+
+  // ------------------------------------------------------------------ movimiento (solo visual)
+
+  private filasPrevias: { actividades: Actividad[]; hitos: Hito[]; claves: Set<string> } | null =
+    null;
+
+  /**
+   * Filas que aparecen al expandir (clave → retraso en ms, 12 ms entre filas y tope de 150 ms).
+   * Solo cuenta cuando cambió el plegado con los mismos datos: la carga, los recálculos y el cambio de
+   * proyecto no animan filas. Se lee en cada render desde la plantilla, así la comparación queda al día.
+   */
+  private readonly movimiento = computed(() => {
+    const actividades = this.actividades();
+    const hitos = this.hitos();
+    const claves = this.filas().map((f) =>
+      f.clase === 'actividad' ? 'a' + f.a.id : f.clase === 'hito' ? 'h' + f.h.id : 'g',
+    );
+    const previas = this.filasPrevias;
+    this.filasPrevias = { actividades, hitos, claves: new Set(claves) };
+    const entradas = new Map<string, number>();
+    if (previas && previas.actividades === actividades && previas.hitos === hitos) {
+      let i = 0;
+      // Tope de 40 filas animadas: con «Expandir todo» en un proyecto grande el resto aparece directo
+      for (const c of claves)
+        if (!previas.claves.has(c) && i < 40) entradas.set(c, Math.min(i++ * 12, 150));
+    }
+    return entradas;
+  });
+
+  protected claseEntrada(clave: string): string {
+    return this.movimiento().has(clave) ? 'gp-anim-fila' : '';
+  }
+
+  protected retrasoEntrada(clave: string): string | null {
+    const ms = this.movimiento().get(clave);
+    return ms == null ? null : `${ms}ms`;
+  }
+
+  /**
+   * Primera carga: solo se despliegan las primeras filas (las que caben a la vista), así nunca se animan
+   * cientos de barras; las de más abajo ya están dibujadas cuando se llega a ellas.
+   */
+  protected claseDibujo(b: Barra): string {
+    return this.primeraCarga() && b.y < FILAS_DIBUJO * FILA ? 'gp-anim-desplegar-x' : '';
+  }
+
+  /** Primera carga: las filas se despliegan de arriba abajo dentro de una ventana de 120 ms. */
+  protected retrasoDibujo(b: Barra): string | null {
+    if (!this.primeraCarga() || b.y >= FILAS_DIBUJO * FILA) return null;
+    const n = Math.min(this.filas().length, FILAS_DIBUJO);
+    const paso = n > 1 ? Math.min(16, 120 / (n - 1)) : 0;
+    return `${Math.round((b.y / FILA) * paso)}ms`;
+  }
+
+  protected iconoEstadoHito(h: Hito): string {
+    if (h.estadoCalculado === 'PENDIENTE' && h.enRiesgo) return 'pi pi-exclamation-triangle';
+    switch (h.estadoCalculado) {
+      case 'CUMPLIDO':
+        return 'pi pi-check-circle';
+      case 'ATRASADO':
+        return 'pi pi-exclamation-circle';
+      case 'PENDIENTE':
+        return 'pi pi-clock';
+      default:
+        return 'pi pi-minus-circle';
+    }
   }
 
   // ------------------------------------------------------------------ interacción

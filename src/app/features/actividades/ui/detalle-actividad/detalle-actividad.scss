@@ -37,14 +37,14 @@
   color: var(--gp-text-muted);
 }
 
+// Fechas que calcula el motor: un valor escrito sobre una línea, no un campo
 .calculado {
   display: flex;
   align-items: center;
   min-height: 2.5rem;
-  padding: 0 var(--gp-space-3);
-  border: 1px dashed var(--gp-line-strong);
-  border-radius: var(--gp-radius-sm);
-  background: var(--gp-surface-sunken);
+  border-bottom: 1px dashed var(--gp-line-strong);
+  font-size: var(--gp-text-lg);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
@@ -64,7 +64,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--gp-space-2);
-  margin-bottom: var(--gp-space-2);
 
   h3 {
     font-size: var(--gp-text-md);
@@ -80,10 +79,7 @@
 }
 
 .tabla-pred {
-  position: relative;
   overflow-x: auto;
-  border: 1px solid var(--gp-line);
-  border-radius: var(--gp-radius-sm);
 
   table {
     width: 100%;
@@ -91,8 +87,8 @@
   }
 
   th {
-    padding: 8px var(--gp-space-2);
-    background: var(--gp-canvas);
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--gp-line-strong);
     color: var(--gp-text-muted);
     font-size: var(--gp-text-sm);
     font-weight: 500;
@@ -100,38 +96,84 @@
     white-space: nowrap;
   }
 
-  th,
-  td {
-    &:first-child {
-      padding-left: var(--gp-space-3);
-    }
-  }
-
   td {
     padding: 6px 4px;
-    border-top: 1px solid var(--gp-line);
+    border-bottom: 1px solid var(--gp-line);
     vertical-align: middle;
   }
 
+  th:first-child,
+  td:first-child {
+    padding-left: 0;
+  }
+
   .col-tipo {
-    width: 96px;
+    width: 124px;
   }
   .col-desfase {
-    width: 72px;
+    width: 64px;
+  }
+  th.col-desfase {
+    white-space: normal;
   }
   .col-quitar {
-    width: 40px;
+    width: 36px;
+    padding-right: 0;
     text-align: right;
   }
 
-  tr.quitada .pred-nombre {
-    text-decoration: line-through;
-    color: var(--gp-text-muted);
+  tr.quitada {
+    .pred-nombre,
+    .regla {
+      text-decoration: line-through;
+      color: var(--gp-text-muted);
+    }
   }
 }
 
+.pred-nombre {
+  display: block;
+  font-weight: 500;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+// Nombre del vínculo bajo la predecesora («Fin a inicio»)
+.regla {
+  display: block;
+  margin-top: 1px;
+  font-size: var(--gp-text-xs);
+  color: var(--gp-text-muted);
+}
+
+.nueva .regla {
+  margin-top: 4px;
+}
+
+// Pictograma FS/SS/FF/SF
+.opcion-tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.glifo {
+  flex: none;
+}
+.g-pred {
+  fill: var(--gp-text-subtle);
+}
+.g-suc {
+  fill: var(--gp-plan);
+}
+.g-linea {
+  fill: none;
+  stroke: var(--gp-text);
+  stroke-width: 1;
+}
+
 .opcion small {
-  margin-left: 6px;
+  margin-left: 2px;
   color: var(--gp-text-muted);
 }
 
@@ -140,11 +182,12 @@
     width: 100%;
   }
   .select-tipo {
-    width: 88px;
+    width: 120px;
   }
   .input-desfase {
-    width: 64px;
+    width: 60px;
     text-align: right;
+    font-variant-numeric: tabular-nums;
   }
   .p-inputnumber.w-full {
     display: flex;
@@ -152,31 +195,34 @@
 }
 
 .vacio {
+  display: flex;
+  align-items: center;
+  gap: var(--gp-space-2);
   margin: 0;
-  padding: var(--gp-space-3);
-  border: 1px dashed var(--gp-line-strong);
-  border-radius: var(--gp-radius-sm);
+  padding: var(--gp-space-2) 0;
   color: var(--gp-text-muted);
   font-size: var(--gp-text-sm);
+
+  i {
+    color: var(--gp-data);
+  }
 }
 
+// Elementos con hijos: ficha de valores derivados
 .derivados {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--gp-space-3) var(--gp-space-4);
-  margin: 0;
-  padding: var(--gp-space-3);
-  border-radius: var(--gp-radius-sm);
-  background: var(--gp-surface-sunken);
+  padding: var(--gp-space-3) 0;
+  border-top: 1px solid var(--gp-line);
+  border-bottom: 1px solid var(--gp-line);
 
-  dt {
-    font-size: var(--gp-text-xs);
-    color: var(--gp-text-muted);
-  }
   dd {
-    margin: 0;
-    font-weight: 500;
+    font-size: var(--gp-text-lg);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
+  }
+
+  .gp-unidad {
+    font-size: 0.8em;
   }
 }
 
@@ -186,11 +232,11 @@
   gap: var(--gp-space-2);
   align-items: flex-start;
   padding: var(--gp-space-3);
-  border-radius: var(--gp-radius-sm);
+  border-radius: var(--gp-radius-md);
   font-size: var(--gp-text-sm);
 
   i {
-    margin-top: 2px;
+    margin-top: 3px;
   }
 }
 
@@ -201,14 +247,22 @@
 
 .aviso {
   background: var(--gp-accent-soft);
-  color: var(--gp-accent);
+  color: var(--gp-accent-hover);
 }
 
+// «Guardar y recalcular» siempre a la vista: la barra queda fija al pie del panel que se desplaza
 .acciones {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--gp-space-2);
+  margin-top: calc(var(--gp-space-1) * -1);
+  padding: var(--gp-space-3) 0;
+  border-top: 1px solid var(--gp-line);
+  background: var(--gp-surface);
 }
 
 @media (max-width: 480px) {

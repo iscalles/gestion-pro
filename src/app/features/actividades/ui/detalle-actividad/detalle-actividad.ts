@@ -8,7 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, concat } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -50,8 +50,9 @@ interface FilaPredecesora {
  */
 @Component({
   selector: 'gp-detalle-actividad',
-  imports: [DecimalPipe, 
+  imports: [DecimalPipe,
     DatePipe,
+    NgTemplateOutlet,
     FormsModule,
     ButtonModule,
     InputTextModule,
@@ -85,6 +86,20 @@ export class DetalleActividad {
       ayuda: TIPO_DEPENDENCIA[t].nombre,
     }),
   );
+
+  /** Solo visual: nombre de cada tipo de vínculo para mostrarlo bajo la predecesora. */
+  protected readonly tipoDependencia = TIPO_DEPENDENCIA;
+
+  /**
+   * Solo visual: pictograma de cada tipo de vínculo en 24 × 14 (predecesora arriba, sucesora abajo y
+   * el conector entre el extremo que manda y el que obedece).
+   */
+  protected readonly glifos: Record<TipoDependencia, { a: number[]; b: number[]; d: string }> = {
+    FS: { a: [1, 10], b: [14, 23], d: 'M10 3.5H12V10.5H14' },
+    SS: { a: [5, 16], b: [5, 21], d: 'M5 3.5H2V10.5H5' },
+    FF: { a: [3, 19], b: [8, 19], d: 'M19 3.5H22V10.5H19' },
+    SF: { a: [13, 23], b: [1, 11], d: 'M13 3.5H12V10.5H11' },
+  };
 
   // Formulario
   protected readonly nombre = signal('');

@@ -1,7 +1,7 @@
 <p-toast position="bottom-right" />
 <p-confirmdialog [style]="{ width: 'min(440px, calc(100vw - 32px))' }" />
 
-<div class="pagina">
+<div class="gp-pagina pagina">
   <gp-page-header
     titulo="Actividades y dependencias"
     descripcion="Etapas, actividades y subactividades del proyecto, con fechas, avance y precedencias."
@@ -22,23 +22,26 @@
   </gp-page-header>
 
   @if (cargando()) {
-    <div class="panel estado-carga" aria-busy="true" aria-label="Cargando proyectos">
-      @for (i of [1, 2, 3, 4]; track i) {
-        <p-skeleton height="1.75rem" />
-      }
+    <div class="panel" aria-busy="true" aria-label="Cargando proyectos">
+      <ng-container *ngTemplateOutlet="esqueletoArbol" />
     </div>
   } @else if (proyectos().length === 0) {
-    <div class="panel vacio-pagina">
+    <div class="panel">
       @if (error(); as msg) {
-        <p-message severity="error">{{ msg }}</p-message>
-        <p-button
-          label="Reintentar"
-          icon="pi pi-refresh"
-          [outlined]="true"
-          (onClick)="reintentar()"
-        />
+        <div class="estado-error">
+          <p-message severity="error">{{ msg }}</p-message>
+          <p-button
+            label="Reintentar"
+            icon="pi pi-refresh"
+            [outlined]="true"
+            (onClick)="reintentar()"
+          />
+        </div>
       } @else {
-        <p>Todavía no tienes proyectos asignados.</p>
+        <div class="gp-vacio">
+          <i class="pi pi-folder-open" aria-hidden="true"></i>
+          <p>Todavía no tienes proyectos asignados.</p>
+        </div>
       }
     </div>
   } @else {
@@ -56,26 +59,33 @@
           styleClass="select-proyecto"
         />
       </div>
+      <!-- La regleta se crea de nuevo al cambiar de proyecto: solo los recálculos la resaltan -->
+      @for (k of [proyectoId() + '|' + plan()?.proyectoId]; track k) {
       @if (actividades().length) {
         <dl class="resumen">
           <div>
             <dt>Plan</dt>
-            <dd>
+            <dd gpResaltar>
               {{ resumen().inicio | date: 'dd-MM-yyyy' }} →
               {{ resumen().termino | date: 'dd-MM-yyyy' }}
             </dd>
           </div>
           <div>
             <dt>Elementos</dt>
-            <dd>{{ resumen().etapas }} etapas · {{ resumen().elementos }} en total</dd>
+            <dd gpResaltar>
+              {{ resumen().etapas }}<span class="gp-unidad"> etapas</span> ·
+              {{ resumen().elementos }}<span class="gp-unidad"> en total</span>
+            </dd>
           </div>
           <div>
             <dt>Avance del proyecto</dt>
-            <dd>{{ resumen().avance | number: '1.0-2' }} %</dd>
+            <dd gpResaltar>
+              {{ resumen().avance | number: '1.0-2' }}<span class="gp-unidad"> %</span>
+            </dd>
           </div>
           <div>
             <dt>Atrasadas</dt>
-            <dd [class.con-atraso]="resumen().atrasadas > 0">
+            <dd [class.con-atraso]="resumen().atrasadas > 0" gpResaltar>
               @if (resumen().atrasadas > 0) {
                 <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
               }
@@ -84,12 +94,18 @@
           </div>
         </dl>
       }
+      }
     </div>
 
     <div class="layout">
-      <section class="panel tabla-panel" aria-label="Estructura de actividades">
+      <section
+        class="panel tabla-panel"
+        aria-label="Estructura de actividades"
+        [class.recargando]="cargandoPlan() && !!plan()"
+        [attr.aria-busy]="cargandoPlan()"
+      >
         @if (error(); as msg) {
-          <div class="estado-carga">
+          <div class="estado-error">
             <p-message severity="error">{{ msg }}</p-message>
             <p-button
               label="Reintentar"
@@ -99,13 +115,11 @@
             />
           </div>
         } @else if (cargandoPlan() && !plan()) {
-          <div class="estado-carga" aria-busy="true" aria-label="Cargando actividades">
-            @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-              <p-skeleton height="1.75rem" />
-            }
+          <div aria-busy="true" aria-label="Cargando actividades">
+            <ng-container *ngTemplateOutlet="esqueletoArbol" />
           </div>
         } @else if (actividades().length === 0) {
-          <div class="vacio-plan">
+          <div class="gp-vacio">
             <i class="pi pi-sitemap" aria-hidden="true"></i>
             <h2>Este proyecto aún no tiene etapas</h2>
             <p>
@@ -135,98 +149,107 @@
               (onClick)="plegarTodo(true)"
             />
           </div>
-          <p-table
-            [value]="filas()"
-            dataKey="id"
-            [tableStyle]="{ 'min-width': '560px' }"
-            styleClass="tabla-arbol"
-          >
-            <ng-template #header>
-              <tr>
-                <th class="col-nombre">Nombre</th>
-                <th class="col-tipo">Tipo</th>
-                <th class="col-resp">Responsable</th>
-                <th class="num">Duración</th>
-                <th>Inicio</th>
-                <th>Término</th>
-                <th class="num">Costo plan</th>
-                <th class="col-avance">Avance</th>
-              </tr>
-            </ng-template>
-            <ng-template #body let-a>
-              <tr
-                [class.seleccionada]="a.id === seleccionId()"
-                [class.fila-etapa]="a.tipo === 'ETAPA'"
-                [class.fila-padre]="!a.esHoja"
-                (click)="seleccionar(a)"
-              >
-                <td class="col-nombre">
-                  <div class="nombre-celda" [style.padding-left.px]="a.nivel * 20">
-                    @if (!a.esHoja) {
-                      <button
-                        type="button"
-                        class="plegar"
-                        (click)="alternar(a, $event)"
-                        [attr.aria-expanded]="!plegadas().has(a.id)"
-                        [attr.aria-label]="
-                          (plegadas().has(a.id) ? 'Expandir ' : 'Contraer ') + a.nombre
-                        "
-                      >
-                        <i
-                          [class]="
-                            plegadas().has(a.id) ? 'pi pi-chevron-right' : 'pi pi-chevron-down'
-                          "
-                          aria-hidden="true"
-                        ></i>
-                      </button>
-                    } @else {
-                      <span class="plegar-espacio" aria-hidden="true"></span>
-                    }
-                    <button
-                      type="button"
-                      class="nombre-btn"
-                      (click)="seleccionar(a); $event.stopPropagation()"
-                      [attr.aria-pressed]="a.id === seleccionId()"
-                    >
-                      @if (a.atrasada) {
-                        <i
-                          class="pi pi-exclamation-circle atraso"
-                          role="img"
-                          aria-label="Atrasada"
-                          pTooltip="Atrasada: el término planificado ya pasó"
-                        ></i>
+          <div class="tabla-contenedor">
+            <table class="arbol">
+              <thead>
+                <tr>
+                  <th class="col-nombre" scope="col">Nombre</th>
+                  <th class="col-tipo" scope="col">Tipo</th>
+                  <th class="col-resp" scope="col">Responsable</th>
+                  <th class="num col-dur" scope="col">Duración</th>
+                  <th class="col-fecha" scope="col">Inicio</th>
+                  <th class="col-fecha" scope="col">Término</th>
+                  <th class="num col-costo" scope="col">Costo plan</th>
+                  <th class="col-avance" scope="col">Avance</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of filas(); track a.id) {
+                  <tr
+                    [class.seleccionada]="a.id === seleccionId()"
+                    [class.fila-etapa]="a.tipo === 'ETAPA'"
+                    [class.fila-padre]="!a.esHoja"
+                    [animate.enter]="claseEntrada(a.id)"
+                    [animate.leave]="claseSalida()"
+                    [style.--retraso]="retrasoEntrada(a.id)"
+                    (click)="seleccionar(a)"
+                  >
+                    <td class="col-nombre">
+                      <div class="nombre-celda" [style.padding-left.px]="a.nivel * 18">
+                        @if (!a.esHoja) {
+                          <button
+                            type="button"
+                            class="plegar"
+                            (click)="alternar(a, $event)"
+                            [attr.aria-expanded]="!plegadas().has(a.id)"
+                            [attr.aria-label]="
+                              (plegadas().has(a.id) ? 'Expandir ' : 'Contraer ') + a.nombre
+                            "
+                          >
+                            <i
+                              class="pi pi-chevron-right chevron"
+                              [class.abierto]="!plegadas().has(a.id)"
+                              aria-hidden="true"
+                            ></i>
+                          </button>
+                        } @else {
+                          <span class="plegar-espacio" aria-hidden="true"></span>
+                        }
+                        <button
+                          type="button"
+                          class="nombre-btn"
+                          (click)="seleccionar(a); $event.stopPropagation()"
+                          [attr.aria-pressed]="a.id === seleccionId()"
+                        >
+                          <span class="edt">{{ a.codigoEdt }}</span>
+                          <span class="nombre-texto">{{ a.nombre }}</span>
+                          @if (a.atrasada) {
+                            <i
+                              class="pi pi-exclamation-circle atraso"
+                              role="img"
+                              aria-label="Atrasada"
+                              pTooltip="Atrasada: el término planificado ya pasó"
+                            ></i>
+                          }
+                        </button>
+                      </div>
+                    </td>
+                    <td class="col-tipo">
+                      <span class="tipo">{{ tipoEtiqueta[$any(a.tipo)] }}</span>
+                    </td>
+                    <td class="resp col-resp">{{ a.responsable ?? '—' }}</td>
+                    <td class="num col-dur">
+                      <span gpResaltar>{{ a.duracionPlan }}<span class="gp-unidad"> d</span></span>
+                    </td>
+                    <td class="fecha col-fecha">
+                      <span gpResaltar>{{ a.fechaInicioPlan | date: 'dd-MM-yyyy' }}</span>
+                    </td>
+                    <td class="fecha col-fecha">
+                      <span gpResaltar>{{ a.fechaTerminoPlan | date: 'dd-MM-yyyy' }}</span>
+                    </td>
+                    <td class="num costo col-costo">
+                      <span class="costo-plan" [class.sobre]="a.costoReal > a.costoPlan" gpResaltar>@if (a.costoReal > a.costoPlan) {<i class="pi pi-arrow-up" aria-hidden="true"></i>}{{ a.costoPlan | clp }}</span>
+                      @if (a.costoReal > a.costoPlan) {
+                        <span class="sr-only"
+                          >; costo real {{ a.costoReal | clp }} supera lo planificado</span
+                        >
                       }
-                      <span class="edt">{{ a.codigoEdt }}</span>
-                      <span>{{ a.nombre }}</span>
-                    </button>
-                  </div>
-                </td>
-                <td class="col-tipo">
-                  <span class="tipo">{{ tipoEtiqueta[$any(a.tipo)] }}</span>
-                </td>
-                <td class="resp col-resp">{{ a.responsable ?? '—' }}</td>
-                <td class="num">{{ a.duracionPlan }} d</td>
-                <td class="fecha">{{ a.fechaInicioPlan | date: 'dd-MM-yyyy' }}</td>
-                <td class="fecha">{{ a.fechaTerminoPlan | date: 'dd-MM-yyyy' }}</td>
-                <td class="num costo" [class.sobre]="a.costoReal > a.costoPlan">
-                  {{ a.costoPlan | clp }}
-                  @if (a.costoReal > a.costoPlan) {
-                    <span class="sr-only">; costo real {{ a.costoReal | clp }} supera lo planificado</span>
-                  }
-                </td>
-                <td>
-                  <div class="avance">
-                    <p-progressbar
-                      [value]="a.avance"
-                      [showValue]="false"
-                      [attr.aria-label]="'Avance ' + a.avance + '%'"
-                    />
-                    <span class="num">{{ a.avance | number: '1.0-1' }}%</span>
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
+                    </td>
+                    <td class="col-avance">
+                      <div class="gp-avance avance">
+                        <p-progressbar
+                          [value]="a.avance"
+                          [showValue]="false"
+                          [attr.aria-label]="'Avance ' + a.avance + '%'"
+                        />
+                        <span class="num" gpResaltar>{{ a.avance | number: '1.0-1' }}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
           <p class="nota-tabla">
             Código EDT derivado del orden de la estructura (1, 1.2, 1.2.3). Costo planificado según los profesionales y
             recursos asignados (detalle en Recursos y costos). Duración en días hábiles según el calendario laboral. Las etapas y actividades con hijos
@@ -311,6 +334,24 @@
     </div>
   }
 </div>
+
+<!-- Esqueleto con la forma del árbol: sangría por nivel, nombre y columnas de cifras -->
+<ng-template #esqueletoArbol>
+  <div class="esqueleto">
+    @for (f of esqueleto; track $index) {
+      <div class="esq-fila" [class.esq-etapa]="f.nivel === 0">
+        <div class="esq-nombre" [style.padding-left.px]="12 + f.nivel * 18">
+          <p-skeleton width="1.75rem" height="0.75rem" />
+          <p-skeleton [width]="f.largo + '%'" height="0.75rem" />
+        </div>
+        <p-skeleton width="4.5rem" height="0.75rem" />
+        <p-skeleton width="4.5rem" height="0.75rem" />
+        <p-skeleton width="5rem" height="0.75rem" />
+        <p-skeleton width="5.5rem" height="0.375rem" />
+      </div>
+    }
+  </div>
+</ng-template>
 
 <p-dialog
   header="Nueva actividad"

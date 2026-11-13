@@ -154,11 +154,11 @@
 
 .gp-contenido > router-outlet + * {
   display: block;
-  animation: gp-aparecer var(--gp-dur-fast) var(--gp-ease-out) both;
+  animation: gp-aparecer var(--gp-dur-fast) var(--gp-ease-out) backwards;
 }
 
 .gp-pagina > * {
-  animation: gp-entrar var(--gp-dur-base) var(--gp-ease-out) both;
+  animation: gp-entrar var(--gp-dur-base) var(--gp-ease-out) backwards;
 
   @for $i from 2 through 5 {
     &:nth-child(#{$i}) {
@@ -173,33 +173,33 @@
 
 // Utilidades para que cada módulo use la misma gramática
 .gp-anim-entrar {
-  animation: gp-entrar var(--gp-dur-base) var(--gp-ease-out) both;
+  animation: gp-entrar var(--gp-dur-base) var(--gp-ease-out) backwards;
 }
 
 .gp-anim-aparecer {
-  animation: gp-aparecer var(--gp-dur-base) var(--gp-ease-out) both;
+  animation: gp-aparecer var(--gp-dur-base) var(--gp-ease-out) backwards;
 }
 
 .gp-anim-fila {
-  animation: gp-desplegar-fila var(--gp-dur-fast) var(--gp-ease-out) both;
+  animation: gp-desplegar-fila var(--gp-dur-fast) var(--gp-ease-out) backwards;
 }
 
 .gp-anim-desplegar-x {
   transform-box: fill-box;
   transform-origin: left center;
-  animation: gp-desplegar-x var(--gp-dur-dibujo) var(--gp-ease-out) both;
+  animation: gp-desplegar-x var(--gp-dur-dibujo) var(--gp-ease-out) backwards;
 }
 
 .gp-anim-crecer-y {
   transform-box: fill-box;
   transform-origin: center bottom;
-  animation: gp-crecer-y var(--gp-dur-dibujo) var(--gp-ease-out) both;
+  animation: gp-crecer-y var(--gp-dur-dibujo) var(--gp-ease-out) backwards;
 }
 
 .gp-anim-celda {
   transform-box: fill-box;
   transform-origin: center;
-  animation: gp-celda var(--gp-dur-dibujo) var(--gp-ease-out) both;
+  animation: gp-celda var(--gp-dur-dibujo) var(--gp-ease-out) backwards;
 }
 
 // Resaltado de valores recalculados (lo activa la directiva gpResaltar)

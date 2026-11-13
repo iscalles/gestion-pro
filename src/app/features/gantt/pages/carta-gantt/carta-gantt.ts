@@ -8,7 +8,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, switchMap, map } from 'rxjs';
@@ -23,6 +23,8 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
+import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
+import { DURACION } from '../../../../shared/ui/movimiento/movimiento';
 import { proyectoPreferido, recordarProyecto } from '../../../../shared/util/contexto-proyecto';
 import { mensajeDeError } from '../../../../core/api/api-error';
 import { ProyectosService } from '../../../proyectos/data/proyectos.service';
@@ -58,6 +60,7 @@ interface Preferencias {
   selector: 'gp-carta-gantt',
   imports: [
     DecimalPipe,
+    NgTemplateOutlet,
     RouterLink,
     FormsModule,
     ButtonModule,
@@ -70,6 +73,7 @@ interface Preferencias {
     ToastModule,
     TooltipModule,
     PageHeader,
+    Resaltar,
     GanttChart,
     DetalleActividad,
   ],
@@ -107,6 +111,24 @@ export class CartaGantt {
     label: ZOOM[z].etiqueta,
     value: z,
   }));
+
+  /**
+   * Solo visual: true hasta que la carta se muestra con datos por primera vez en esta visita. Con ella
+   * las barras se despliegan una sola vez; recálculos, cambios de escala o de proyecto no lo repiten.
+   */
+  protected readonly primeraCarga = signal(true);
+
+  /** Solo visual: forma del esqueleto de carga (sangría, largo del nombre y barra en % del ancho). */
+  protected readonly esqueleto = [
+    { nivel: 0, largo: 42, x: 2, ancho: 46 },
+    { nivel: 1, largo: 64, x: 2, ancho: 20 },
+    { nivel: 2, largo: 56, x: 2, ancho: 9 },
+    { nivel: 2, largo: 70, x: 12, ancho: 10 },
+    { nivel: 1, largo: 50, x: 23, ancho: 25 },
+    { nivel: 0, largo: 38, x: 46, ancho: 40 },
+    { nivel: 1, largo: 60, x: 46, ancho: 16 },
+    { nivel: 1, largo: 54, x: 63, ancho: 22 },
+  ];
 
   protected readonly proyectoId = computed(() => {
     const ps = this.proyectos();
@@ -152,6 +174,14 @@ export class CartaGantt {
       } catch {
         /* sin almacenamiento: las preferencias duran solo esta visita */
       }
+    });
+
+    // Solo visual: cuando la carta ya se pintó con datos, al terminar el dibujo no se vuelve a animar.
+    effect(() => {
+      if (!this.primeraCarga() || !this.plan() || this.actividades().length === 0) return;
+      untracked(() =>
+        setTimeout(() => this.primeraCarga.set(false), DURACION.dibujo + DURACION.base),
+      );
     });
   }
 

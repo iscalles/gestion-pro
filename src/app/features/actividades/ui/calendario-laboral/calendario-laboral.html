@@ -1,7 +1,14 @@
 @if (cargando()) {
   <div class="cal" aria-busy="true" aria-label="Cargando calendario">
+    <p-skeleton width="45%" height="1rem" />
+    <div class="esq-dias">
+      @for (i of [1, 2, 3, 4, 5, 6, 7]; track i) {
+        <p-skeleton width="3.25rem" height="2.5rem" />
+      }
+    </div>
+    <p-skeleton width="60%" height="2.5rem" />
     @for (i of [1, 2, 3]; track i) {
-      <p-skeleton height="1.75rem" />
+      <p-skeleton height="1.25rem" />
     }
   </div>
 } @else if (calendario(); as c) {
@@ -25,7 +32,10 @@
         }
       </div>
       @if (laborables().length === 0) {
-        <small class="error-campo">Marca al menos un día laborable.</small>
+        <small class="error-campo">
+          <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+          Marca al menos un día laborable.
+        </small>
       }
     </fieldset>
 
@@ -70,7 +80,7 @@
       </div>
     }
 
-    <section aria-labelledby="titulo-dnl">
+    <section class="no-laborables" aria-labelledby="titulo-dnl">
       <div class="seccion-cabecera">
         <h3 id="titulo-dnl">Días no laborables</h3>
         @if (editable() && !agregando()) {
@@ -177,10 +187,13 @@
       @if (editable()) {
         Cambiar el calendario recalcula las fechas de todos los proyectos que lo usan.
       } @else {
+        <i class="pi pi-lock" aria-hidden="true"></i>
         Solo el administrador puede modificar el calendario.
       }
     </p>
   </div>
 } @else if (error(); as msg) {
-  <p-message severity="error">{{ msg }}</p-message>
+  <div class="cal">
+    <p-message severity="error">{{ msg }}</p-message>
+  </div>
 }

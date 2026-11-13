@@ -1,6 +1,6 @@
 <p-toast position="bottom-right" />
 
-<div class="pagina">
+<div class="gp-pagina pagina">
   <gp-page-header
     titulo="Carta Gantt"
     descripcion="Se genera desde las actividades, dependencias, hitos y calendario del proyecto. Haz clic en una barra para editarla: el cambio se recalcula y la carta se actualiza."
@@ -15,23 +15,26 @@
   </gp-page-header>
 
   @if (cargando()) {
-    <div class="panel estado-carga" aria-busy="true" aria-label="Cargando proyectos">
-      @for (i of [1, 2, 3, 4]; track i) {
-        <p-skeleton height="1.75rem" />
-      }
+    <div class="panel carta" aria-busy="true" aria-label="Cargando proyectos">
+      <ng-container *ngTemplateOutlet="esqueletoCarta" />
     </div>
   } @else if (proyectos().length === 0) {
-    <div class="panel estado-carga">
+    <div class="panel">
       @if (error(); as msg) {
-        <p-message severity="error">{{ msg }}</p-message>
-        <p-button
-          label="Reintentar"
-          icon="pi pi-refresh"
-          [outlined]="true"
-          (onClick)="reintentar()"
-        />
+        <div class="estado-error">
+          <p-message severity="error">{{ msg }}</p-message>
+          <p-button
+            label="Reintentar"
+            icon="pi pi-refresh"
+            [outlined]="true"
+            (onClick)="reintentar()"
+          />
+        </div>
       } @else {
-        <p>Todavía no tienes proyectos asignados.</p>
+        <div class="gp-vacio">
+          <i class="pi pi-folder-open" aria-hidden="true"></i>
+          <p>Todavía no tienes proyectos asignados.</p>
+        </div>
       }
     </div>
   } @else {
@@ -49,15 +52,17 @@
           styleClass="select-proyecto"
         />
       </div>
+      <!-- La regleta se crea de nuevo al cambiar de proyecto: solo los recálculos la resaltan -->
+      @for (k of [proyectoId() + '|' + plan()?.proyectoId]; track k) {
       @if (actividades().length) {
         <dl class="resumen">
           <div>
             <dt>Plan calculado</dt>
-            <dd>{{ resumen().inicio }} → {{ resumen().termino }}</dd>
+            <dd gpResaltar>{{ resumen().inicio }} → {{ resumen().termino }}</dd>
           </div>
           <div>
             <dt>Término comprometido</dt>
-            <dd [class.alerta]="resumen().excede">
+            <dd [class.alerta]="resumen().excede" gpResaltar>
               @if (resumen().excede) {
                 <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
               }
@@ -66,17 +71,31 @@
           </div>
           <div>
             <dt>Avance</dt>
-            <dd>{{ resumen().avance | number: '1.0-2' }} %</dd>
+            <dd gpResaltar>
+              {{ resumen().avance | number: '1.0-2' }}<span class="gp-unidad"> %</span>
+            </dd>
           </div>
           <div>
             <dt>Atrasadas</dt>
-            <dd [class.alerta]="resumen().atrasadas + resumen().hitosAtrasados > 0">
-              {{ resumen().atrasadas }}
-              {{ resumen().atrasadas === 1 ? 'actividad' : 'actividades' }} ·
-              {{ resumen().hitosAtrasados }} {{ resumen().hitosAtrasados === 1 ? 'hito' : 'hitos' }}
+            <dd [class.alerta]="resumen().atrasadas + resumen().hitosAtrasados > 0" gpResaltar>
+              @if (resumen().atrasadas + resumen().hitosAtrasados > 0) {
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              }
+              <span
+                >{{ resumen().atrasadas }}
+                <span class="gp-unidad">{{
+                  resumen().atrasadas === 1 ? 'actividad' : 'actividades'
+                }}</span>
+                ·
+                {{ resumen().hitosAtrasados }}
+                <span class="gp-unidad">{{
+                  resumen().hitosAtrasados === 1 ? 'hito' : 'hitos'
+                }}</span></span
+              >
             </dd>
           </div>
         </dl>
+      }
       }
     </div>
 
@@ -145,7 +164,7 @@
       </div>
 
       @if (error(); as msg) {
-        <div class="estado-carga">
+        <div class="estado-error">
           <p-message severity="error">{{ msg }}</p-message>
           <p-button
             label="Reintentar"
@@ -155,13 +174,11 @@
           />
         </div>
       } @else if (cargandoPlan() && !plan()) {
-        <div class="estado-carga" aria-busy="true" aria-label="Cargando la carta">
-          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-            <p-skeleton height="1.75rem" />
-          }
+        <div aria-busy="true" aria-label="Cargando la carta">
+          <ng-container *ngTemplateOutlet="esqueletoCarta" />
         </div>
       } @else if (actividades().length === 0) {
-        <div class="vacio">
+        <div class="gp-vacio">
           <i class="pi pi-chart-bar" aria-hidden="true"></i>
           <h2>Este proyecto aún no tiene actividades</h2>
           <p>La carta se genera sola a partir de las etapas, actividades y dependencias.</p>
@@ -173,122 +190,147 @@
           />
         </div>
       } @else if (plan(); as p) {
-        <gp-gantt-chart
-          [actividades]="p.actividades"
-          [dependencias]="p.dependencias"
-          [hitos]="hitos()"
-          [noLaborables]="noLaborables()"
-          [diasLaborables]="
-            calendario()?.diasLaborables ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
-          "
-          [zoom]="zoom()"
-          [mostrarReal]="mostrarReal()"
-          [mostrarVinculos]="mostrarVinculos()"
-          [seleccionId]="seleccionId()"
-          (seleccionar)="seleccionId.set($event)"
-        />
-      }
+        <div class="lamina" [class.recargando]="cargandoPlan()" [attr.aria-busy]="cargandoPlan()">
+          <gp-gantt-chart
+            [actividades]="p.actividades"
+            [dependencias]="p.dependencias"
+            [hitos]="hitos()"
+            [noLaborables]="noLaborables()"
+            [diasLaborables]="
+              calendario()?.diasLaborables ?? ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']
+            "
+            [zoom]="zoom()"
+            [mostrarReal]="mostrarReal()"
+            [mostrarVinculos]="mostrarVinculos()"
+            [seleccionId]="seleccionId()"
+            [primeraCarga]="primeraCarga()"
+            (seleccionar)="seleccionId.set($event)"
+          />
+        </div>
 
-      <!-- Leyenda -->
-      <ul class="leyenda" aria-label="Leyenda">
-        <li>
-          <svg width="28" height="12" aria-hidden="true">
-            <rect x="0.5" y="1.5" width="27" height="9" rx="2" class="l-plan" />
-            <rect x="0.5" y="1.5" width="14" height="9" rx="2" class="l-progreso" /></svg
-          >Planificado y avance
-        </li>
-        @if (mostrarReal()) {
+        <!-- Leyenda: el mismo vocabulario visual de la carta -->
+        <ul class="leyenda" aria-label="Leyenda">
           <li>
-            <svg width="28" height="12" aria-hidden="true">
-              <rect x="0" y="4" width="28" height="5" rx="1.5" class="l-real" /></svg
-            >Real
+            <svg width="28" height="14" aria-hidden="true">
+              <rect x="0" y="0" width="28" height="14" rx="2" class="l-plan" />
+              <rect x="0" y="0" width="15" height="14" rx="2" class="l-progreso" /></svg
+            >Planificado y avance
+          </li>
+          @if (mostrarReal()) {
+            <li>
+              <svg width="28" height="14" aria-hidden="true">
+                <rect x="0" y="4" width="28" height="6" rx="1.5" class="l-real" /></svg
+              >Real
+            </li>
+            <li>
+              <svg width="28" height="14" aria-hidden="true">
+                <rect x="0" y="4" width="28" height="6" rx="1.5" class="l-desvio" /></svg
+              >Real que excede el plan
+            </li>
+          }
+          <li>
+            <svg width="28" height="14" aria-hidden="true">
+              <rect x="0" y="3" width="28" height="4" class="l-resumen" />
+              <path d="M0,3 v9 l5,-5 v-4 z M28,3 v9 l-5,-5 v-4 z" class="l-tope" /></svg
+            >Etapa o actividad con hijos
           </li>
           <li>
-            <svg width="28" height="12" aria-hidden="true">
-              <rect x="0" y="4" width="28" height="5" rx="1.5" class="l-desvio" /></svg
-            >Real que excede el plan
+            <svg width="14" height="14" aria-hidden="true">
+              <circle cx="7" cy="7" r="6" class="l-atraso" />
+              <rect x="6.1" y="3.4" width="1.8" height="4" rx="0.9" class="l-signo" />
+              <circle cx="7" cy="9.6" r="1" class="l-signo" /></svg
+            >Atrasada
           </li>
-        }
-        <li>
-          <svg width="28" height="12" aria-hidden="true">
-            <rect x="0" y="3" width="28" height="6" class="l-resumen" />
-            <path d="M0,3 v9 l5,-3 z M28,3 v9 l-5,-3 z" class="l-tope" /></svg
-          >Etapa o actividad con hijos
-        </li>
-        <li>
-          <svg width="16" height="12" aria-hidden="true">
-            <circle cx="8" cy="6" r="4.5" class="l-atraso" /></svg
-          >Atrasada
-        </li>
-        <li class="hitos-leyenda">
-          <svg width="16" height="14" aria-hidden="true">
-            <rect
-              x="3"
-              y="2"
-              width="10"
-              height="10"
-              transform="rotate(45 8 7)"
-              class="l-h-ok"
-            /></svg
-          >Cumplido
-          <svg width="16" height="14" aria-hidden="true">
-            <rect
-              x="3"
-              y="2"
-              width="10"
-              height="10"
-              transform="rotate(45 8 7)"
-              class="l-h-pend"
-            /></svg
-          >Pendiente
-          <svg width="16" height="14" aria-hidden="true">
-            <rect
-              x="3"
-              y="2"
-              width="10"
-              height="10"
-              transform="rotate(45 8 7)"
-              class="l-h-riesgo"
-            /></svg
-          >En riesgo
-          <svg width="16" height="14" aria-hidden="true">
-            <rect
-              x="3"
-              y="2"
-              width="10"
-              height="10"
-              transform="rotate(45 8 7)"
-              class="l-h-atraso"
-            /></svg
-          >Atrasado
-          <svg width="16" height="14" aria-hidden="true">
-            <rect
-              x="3.5"
-              y="2.5"
-              width="9"
-              height="9"
-              transform="rotate(45 8 7)"
-              class="l-h-fantasma"
-            /></svg
-          >Fecha comprometida o prevista
-        </li>
-        <li>
-          <svg width="16" height="12" aria-hidden="true">
-            <rect x="0" y="0" width="16" height="12" class="l-feriado" /></svg
-          >Feriado
-        </li>
-        @if (mostrarVinculos()) {
+          <li class="hitos-leyenda">
+            <svg width="16" height="14" aria-hidden="true">
+              <rect
+                x="3"
+                y="2"
+                width="10"
+                height="10"
+                transform="rotate(45 8 7)"
+                class="l-h-ok"
+              /></svg
+            >Cumplido
+            <svg width="16" height="14" aria-hidden="true">
+              <rect
+                x="3"
+                y="2"
+                width="10"
+                height="10"
+                transform="rotate(45 8 7)"
+                class="l-h-pend"
+              /></svg
+            >Pendiente
+            <svg width="16" height="14" aria-hidden="true">
+              <rect
+                x="3"
+                y="2"
+                width="10"
+                height="10"
+                transform="rotate(45 8 7)"
+                class="l-h-riesgo"
+              /></svg
+            >En riesgo
+            <svg width="16" height="14" aria-hidden="true">
+              <rect
+                x="3"
+                y="2"
+                width="10"
+                height="10"
+                transform="rotate(45 8 7)"
+                class="l-h-atraso"
+              /></svg
+            >Atrasado
+            <svg width="16" height="14" aria-hidden="true">
+              <rect
+                x="3.5"
+                y="2.5"
+                width="9"
+                height="9"
+                transform="rotate(45 8 7)"
+                class="l-h-fantasma"
+              /></svg
+            >Fecha comprometida o prevista
+          </li>
           <li>
-            <svg width="28" height="12" aria-hidden="true">
-              <path d="M0,3 H14 V9 H24" class="l-vinculo" />
-              <path d="M22,6 L28,9 L22,12 z" class="l-punta" /></svg
-            >Dependencia
+            <svg width="16" height="14" aria-hidden="true">
+              <rect x="0" y="0" width="16" height="14" class="l-feriado" /></svg
+            >Feriado
           </li>
-        }
-      </ul>
+          @if (mostrarVinculos()) {
+            <li>
+              <svg width="28" height="14" aria-hidden="true">
+                <path d="M0,4 H13 V10 H23" class="l-vinculo" />
+                <path d="M22,7 L28,10 L22,13 z" class="l-punta" /></svg
+              >Dependencia
+            </li>
+          }
+        </ul>
+      }
     </section>
   }
 </div>
+
+<!-- Esqueleto con la forma de la carta: grilla a la izquierda y barras escalonadas a la derecha -->
+<ng-template #esqueletoCarta>
+  <div class="esqueleto">
+    @for (f of esqueleto; track $index) {
+      <div class="esq-fila">
+        <div class="esq-nombre" [style.padding-left.px]="16 + f.nivel * 16">
+          <p-skeleton [width]="f.largo + '%'" height="0.75rem" />
+        </div>
+        <div class="esq-tiempo">
+          <p-skeleton
+            [style.margin-left.%]="f.x"
+            [width]="f.ancho + '%'"
+            [height]="f.nivel === 0 ? '0.25rem' : '0.875rem'"
+          />
+        </div>
+      </div>
+    }
+  </div>
+</ng-template>
 
 <p-drawer
   [visible]="!!seleccion()"

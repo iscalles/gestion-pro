@@ -52,6 +52,8 @@
                 [class.padre]="!f.a.esHoja"
                 [class.seleccionada]="f.a.id === seleccionId()"
                 [class.resaltada]="f.a.id === hoverId()"
+                [animate.enter]="claseEntrada('a' + f.a.id)"
+                [style.--retraso]="retrasoEntrada('a' + f.a.id)"
                 (mouseenter)="hoverId.set(f.a.id)"
                 (mouseleave)="hoverId.set(null)"
               >
@@ -67,9 +69,8 @@
                       "
                     >
                       <i
-                        [class]="
-                          plegadas().has(f.a.id) ? 'pi pi-chevron-right' : 'pi pi-chevron-down'
-                        "
+                        class="pi pi-chevron-right chevron"
+                        [class.abierto]="!plegadas().has(f.a.id)"
                         aria-hidden="true"
                       ></i>
                     </button>
@@ -89,23 +90,26 @@
                     "
                     [title]="f.a.nombre"
                   >
+                    <span class="texto">{{ f.a.nombre }}</span>
                     @if (f.a.atrasada) {
                       <i class="pi pi-exclamation-circle atraso" aria-hidden="true"></i>
                     }
-                    <span class="texto">{{ f.a.nombre }}</span>
                   </button>
                 </span>
-                <span class="c-fecha"
+                <span class="c-fecha" gpResaltar
                   >{{ f.a.fechaInicioPlan | slice: 8 : 10 }}-{{
                     f.a.fechaInicioPlan | slice: 5 : 7
                   }}</span
                 >
-                <span class="c-fecha"
+                <span class="c-fecha" gpResaltar
                   >{{ f.a.fechaTerminoPlan | slice: 8 : 10 }}-{{
                     f.a.fechaTerminoPlan | slice: 5 : 7
                   }}</span
                 >
-                <span class="c-avance">{{ f.a.avance | number: '1.0-1' }}%</span>
+                <span class="c-avance"
+                  ><span gpResaltar>{{ f.a.avance | number: '1.0-1' }}</span
+                  ><span class="gp-unidad">%</span></span
+                >
               </li>
             }
             @case ('grupo-hitos') {
@@ -119,7 +123,8 @@
                     [attr.aria-label]="hitosPlegados() ? 'Expandir hitos' : 'Contraer hitos'"
                   >
                     <i
-                      [class]="hitosPlegados() ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"
+                      class="pi pi-chevron-right chevron"
+                      [class.abierto]="!hitosPlegados()"
                       aria-hidden="true"
                     ></i>
                   </button>
@@ -130,7 +135,11 @@
               </li>
             }
             @case ('hito') {
-              <li class="fila fila-hito">
+              <li
+                class="fila fila-hito"
+                [animate.enter]="claseEntrada('h' + f.h.id)"
+                [style.--retraso]="retrasoEntrada('h' + f.h.id)"
+              >
                 <span class="c-nombre" [style.padding-left.px]="16">
                   <span class="plegar-espacio" aria-hidden="true"></span>
                   <span class="texto" [title]="f.h.descripcion"
@@ -151,6 +160,7 @@
                       : f.h.estadoCalculado.toLowerCase())
                   "
                 >
+                  <i [class]="iconoEstadoHito(f.h)" aria-hidden="true"></i>
                   {{ etiquetaEstadoHito(f.h) }}
                 </span>
               </li>
@@ -173,8 +183,8 @@
             viewBox="0 0 8 8"
             refX="7"
             refY="4"
-            markerWidth="7"
-            markerHeight="7"
+            markerWidth="6"
+            markerHeight="6"
             orient="auto"
           >
             <path d="M0,0 L8,4 L0,8 z" class="punta" />
@@ -184,8 +194,8 @@
             viewBox="0 0 8 8"
             refX="7"
             refY="4"
-            markerWidth="7"
-            markerHeight="7"
+            markerWidth="6"
+            markerHeight="6"
             orient="auto"
           >
             <path d="M0,0 L8,4 L0,8 z" class="punta activa" />
@@ -202,43 +212,25 @@
           </pattern>
           <pattern
             id="gp-en-curso"
-            width="6"
-            height="6"
+            width="5"
+            height="5"
             patternUnits="userSpaceOnUse"
             patternTransform="rotate(45)"
           >
-            <rect width="6" height="6" class="en-curso-fondo" />
-            <line x1="0" y1="0" x2="0" y2="6" class="en-curso-raya" />
+            <rect width="5" height="5" class="en-curso-fondo" />
+            <line x1="0" y1="0" x2="0" y2="5" class="en-curso-raya" />
           </pattern>
         </defs>
 
-        <!-- Fondo: filas de etapa, selección, días no laborables y divisiones de la escala -->
+        <!-- Fondo: selección y puntero, días no laborables, divisiones de la escala y líneas de fila -->
         @for (f of filas(); track $index) {
-          @if (
-            f.clase === 'actividad' &&
-            (f.a.tipo === 'ETAPA' || f.a.id === seleccionId() || f.a.id === hoverId())
-          ) {
+          @if (f.clase === 'actividad' && (f.a.id === seleccionId() || f.a.id === hoverId())) {
             <rect
               x="0"
               [attr.y]="f.y"
               [attr.width]="ancho()"
               [attr.height]="FILA"
-              [class]="
-                f.a.id === seleccionId()
-                  ? 'fondo-seleccion'
-                  : f.a.id === hoverId()
-                    ? 'fondo-hover'
-                    : 'fondo-etapa'
-              "
-            />
-          }
-          @if (f.clase === 'grupo-hitos') {
-            <rect
-              x="0"
-              [attr.y]="f.y"
-              [attr.width]="ancho()"
-              [attr.height]="FILA"
-              class="fondo-etapa"
+              [class]="f.a.id === seleccionId() ? 'fondo-seleccion' : 'fondo-hover'"
             />
           }
         }
@@ -248,8 +240,7 @@
             y="0"
             [attr.width]="fr.ancho"
             [attr.height]="alto()"
-            [attr.fill]="fr.feriado ? 'url(#gp-feriado)' : null"
-            [class]="fr.feriado ? '' : 'no-laborable'"
+            [class]="fr.feriado ? 'feriado' : 'no-laborable'"
           />
         }
         @for (c of escala().inferior; track c.x) {
@@ -263,22 +254,33 @@
             [attr.y2]="f.y + FILA - 0.5"
             class="linea-fila"
           />
+          @if ((f.clase === 'actividad' && f.a.tipo === 'ETAPA') || f.clase === 'grupo-hitos') {
+            <line
+              x1="0"
+              [attr.x2]="ancho()"
+              [attr.y1]="f.y - 0.5"
+              [attr.y2]="f.y - 0.5"
+              class="linea-etapa"
+            />
+          }
         }
 
         <!-- Hoy -->
         <line [attr.x1]="xHoy()" [attr.x2]="xHoy()" y1="0" [attr.y2]="alto()" class="hoy" />
 
-        <!-- Flechas de precedencia -->
-        @for (v of vinculos(); track v.id) {
-          <path
-            [attr.d]="v.d"
-            class="vinculo"
-            [class.activo]="v.activo"
-            [attr.marker-end]="v.activo ? 'url(#gp-flecha-activa)' : 'url(#gp-flecha)'"
-          />
-        }
+        <!-- Flechas de precedencia: aparecen después de las barras en la primera carga -->
+        <g class="capa" [animate.enter]="primeraCarga() ? 'gp-anim-aparecer' : ''">
+          @for (v of vinculos(); track v.id) {
+            <path
+              [attr.d]="v.d"
+              class="vinculo"
+              [class.activo]="v.activo"
+              [attr.marker-end]="v.activo ? 'url(#gp-flecha-activa)' : 'url(#gp-flecha)'"
+            />
+          }
+        </g>
 
-        <!-- Barras -->
+        <!-- Barras: en la primera carga cada fila se despliega desde su inicio -->
         @for (b of barras(); track b.a.id) {
           <g
             class="barra"
@@ -286,6 +288,9 @@
             [class.resumen]="!b.a.esHoja"
             [class.atrasada]="b.a.atrasada"
             [class.seleccionada]="b.a.id === seleccionId()"
+            [class.activa]="b.a.id === hoverId()"
+            [animate.enter]="claseEntrada('a' + b.a.id)"
+            [style.--retraso]="retrasoEntrada('a' + b.a.id)"
             (mouseenter)="entrar($event, b)"
             (mousemove)="mover($event)"
             (mouseleave)="salir()"
@@ -299,142 +304,177 @@
               [attr.height]="FILA - 4"
               class="zona"
             />
-            @if (b.a.esHoja) {
-              <rect
-                [attr.x]="b.x1"
-                [attr.y]="b.y + yBarra(b.a)"
-                [attr.width]="b.x2 - b.x1"
-                [attr.height]="altoBarra(b.a)"
-                rx="3"
-                class="plan"
-              />
-              @if (b.progreso > 0) {
+            <g
+              class="trazo"
+              [animate.enter]="claseDibujo(b)"
+              [style.--retraso]="retrasoDibujo(b)"
+            >
+              @if (b.a.esHoja) {
                 <rect
                   [attr.x]="b.x1"
                   [attr.y]="b.y + yBarra(b.a)"
-                  [attr.width]="b.progreso"
+                  [attr.width]="b.x2 - b.x1"
                   [attr.height]="altoBarra(b.a)"
-                  rx="3"
-                  class="progreso"
+                  rx="2"
+                  class="plan"
                 />
-              }
-              <rect
-                [attr.x]="b.x1"
-                [attr.y]="b.y + yBarra(b.a)"
-                [attr.width]="b.x2 - b.x1"
-                [attr.height]="altoBarra(b.a)"
-                rx="3"
-                class="borde"
-              />
-            } @else {
-              <rect
-                [attr.x]="b.x1"
-                [attr.y]="b.y + 12"
-                [attr.width]="b.x2 - b.x1"
-                height="8"
-                class="plan"
-              />
-              @if (b.progreso > 0) {
+                @if (b.progreso > 0) {
+                  <rect
+                    [attr.x]="b.x1"
+                    [attr.y]="b.y + yBarra(b.a)"
+                    [attr.width]="b.progreso"
+                    [attr.height]="altoBarra(b.a)"
+                    rx="2"
+                    class="progreso"
+                  />
+                }
+                <rect
+                  [attr.x]="b.x1 + 0.5"
+                  [attr.y]="b.y + yBarra(b.a) + 0.5"
+                  [attr.width]="Math.max(0, b.x2 - b.x1 - 1)"
+                  [attr.height]="altoBarra(b.a) - 1"
+                  rx="2"
+                  class="borde"
+                />
+              } @else {
                 <rect
                   [attr.x]="b.x1"
-                  [attr.y]="b.y + 12"
-                  [attr.width]="b.progreso"
-                  height="8"
-                  class="progreso"
+                  [attr.y]="b.y + yBarra(b.a)"
+                  [attr.width]="b.x2 - b.x1"
+                  [attr.height]="altoBarra(b.a)"
+                  class="plan"
+                />
+                @if (b.progreso > 0) {
+                  <rect
+                    [attr.x]="b.x1"
+                    [attr.y]="b.y + yBarra(b.a)"
+                    [attr.width]="b.progreso"
+                    [attr.height]="altoBarra(b.a)"
+                    class="progreso"
+                  />
+                }
+                <path
+                  [attr.d]="'M' + b.x1 + ',' + (b.y + yBarra(b.a)) + ' v9 l5,-5 v-4 z'"
+                  class="tope"
+                />
+                <path
+                  [attr.d]="'M' + b.x2 + ',' + (b.y + yBarra(b.a)) + ' v9 l-5,-5 v-4 z'"
+                  class="tope"
                 />
               }
-              <path [attr.d]="'M' + b.x1 + ',' + (b.y + 12) + ' v12 l6,-4 z'" class="tope" />
-              <path [attr.d]="'M' + b.x2 + ',' + (b.y + 12) + ' v12 l-6,-4 z'" class="tope" />
-            }
-            @if (b.real) {
-              <rect
-                [attr.x]="b.real.x1"
-                [attr.y]="b.y + (b.a.esHoja ? 25 : 25)"
-                [attr.width]="b.real.x2 - b.real.x1"
-                height="5"
-                rx="1.5"
-                class="real"
-                [class.desviada]="b.real.desviada"
-                [attr.fill]="b.real.abierta && !b.real.desviada ? 'url(#gp-en-curso)' : null"
-              />
-            }
-            @if (b.a.atrasada) {
-              <circle
-                [attr.cx]="b.x2 + 9"
-                [attr.cy]="b.y + yBarra(b.a) + altoBarra(b.a) / 2"
-                r="4.5"
-                class="marca-atraso"
-              />
-            }
-            @if (zoom() !== 'mes' || b.x2 - b.x1 > 40) {
-              <text
-                [attr.x]="b.x2 + (b.a.atrasada ? 18 : 6)"
-                [attr.y]="b.y + yBarra(b.a) + altoBarra(b.a) / 2 + 4"
-                class="texto-avance"
-              >
-                {{ b.a.avance | number: '1.0-1' }}%
-              </text>
-            }
+              @if (b.real) {
+                <rect
+                  [attr.x]="b.real.x1"
+                  [attr.y]="b.y + 25"
+                  [attr.width]="b.real.x2 - b.real.x1"
+                  height="6"
+                  rx="1.5"
+                  class="real"
+                  [class.desviada]="b.real.desviada"
+                  [class.en-curso]="b.real.abierta && !b.real.desviada"
+                />
+              }
+            </g>
           </g>
         }
 
-        <!-- Hitos: diamante en la fecha comprometida o real; hueco = fecha comprometida o prevista -->
-        @for (d of diamantes(); track d.h.id) {
-          <g
-            class="hito"
-            [class]="'hito h-' + d.clase"
-            (mouseenter)="entrarHito($event, d)"
-            (mousemove)="mover($event)"
-            (mouseleave)="salir()"
-          >
-            <rect
-              [attr.x]="Math.min(d.x, d.fantasma?.x ?? d.x) - 10"
-              [attr.y]="d.y + 4"
-              [attr.width]="Math.abs((d.fantasma?.x ?? d.x) - d.x) + 20"
-              [attr.height]="FILA - 8"
-              class="zona"
-            />
-            @if (d.fantasma; as f) {
-              <line
-                [attr.x1]="Math.min(d.x, f.x)"
-                [attr.x2]="Math.max(d.x, f.x)"
-                [attr.y1]="d.y + 18"
-                [attr.y2]="d.y + 18"
-                class="desvio"
-                [class.tarde]="f.desvio"
-              />
-              <rect
-                [attr.x]="f.x - 5"
-                [attr.y]="d.y + 13"
-                width="10"
-                height="10"
-                [attr.transform]="'rotate(45 ' + f.x + ' ' + (d.y + 18) + ')'"
-                class="fantasma"
-              />
-            }
-            <rect
-              [attr.x]="d.x - 7"
-              [attr.y]="d.y + 11"
-              width="14"
-              height="14"
-              [attr.transform]="'rotate(45 ' + d.x + ' ' + (d.y + 18) + ')'"
-              class="diamante"
-            />
-            @if (d.h.estado === 'CUMPLIDO') {
-              <path
-                [attr.d]="'M' + (d.x - 3.5) + ',' + (d.y + 18) + ' l2.5,2.5 l5,-5'"
-                class="check"
-              />
-            }
-            <text
-              [attr.x]="Math.max(d.x, d.fantasma?.x ?? d.x) + 14"
-              [attr.y]="d.y + 22"
-              class="texto-hito"
+        <!-- Avance y atraso a la derecha de cada barra -->
+        <g class="capa etiquetas" [animate.enter]="primeraCarga() ? 'gp-anim-aparecer' : ''">
+          @for (b of barras(); track b.a.id) {
+            <g
+              [animate.enter]="claseEntrada('a' + b.a.id)"
+              [style.--retraso]="retrasoEntrada('a' + b.a.id)"
             >
-              {{ d.h.codigo }}
-            </text>
-          </g>
-        }
+              @if (b.a.atrasada) {
+                <g
+                  class="icono-atraso"
+                  [attr.transform]="
+                    'translate(' +
+                    (b.x2 + 10) +
+                    ',' +
+                    (b.y + yBarra(b.a) + altoBarra(b.a) / 2) +
+                    ')'
+                  "
+                >
+                  <circle r="6" class="fondo" />
+                  <rect x="-0.9" y="-3.6" width="1.8" height="4" rx="0.9" class="signo" />
+                  <circle cy="2.6" r="1" class="signo" />
+                </g>
+              }
+              @if (zoom() !== 'mes' || b.x2 - b.x1 > 40) {
+                <text
+                  [attr.x]="b.x2 + (b.a.atrasada ? 20 : 6)"
+                  [attr.y]="b.y + yBarra(b.a) + altoBarra(b.a) / 2 + 4"
+                  class="texto-avance"
+                >
+                  {{ b.a.avance | number: '1.0-1' }}%
+                </text>
+              }
+            </g>
+          }
+        </g>
+
+        <!-- Hitos: diamante en la fecha comprometida o real; hueco = fecha comprometida o prevista -->
+        <g class="capa" [animate.enter]="primeraCarga() ? 'gp-anim-aparecer' : ''">
+          @for (d of diamantes(); track d.h.id) {
+            <g
+              class="hito"
+              [class]="'hito h-' + d.clase"
+              [animate.enter]="claseEntrada('h' + d.h.id)"
+              [style.--retraso]="retrasoEntrada('h' + d.h.id)"
+              (mouseenter)="entrarHito($event, d)"
+              (mousemove)="mover($event)"
+              (mouseleave)="salir()"
+            >
+              <rect
+                [attr.x]="Math.min(d.x, d.fantasma?.x ?? d.x) - 10"
+                [attr.y]="d.y + 4"
+                [attr.width]="Math.abs((d.fantasma?.x ?? d.x) - d.x) + 20"
+                [attr.height]="FILA - 8"
+                class="zona"
+              />
+              @if (d.fantasma; as f) {
+                <line
+                  [attr.x1]="Math.min(d.x, f.x)"
+                  [attr.x2]="Math.max(d.x, f.x)"
+                  [attr.y1]="d.y + 18"
+                  [attr.y2]="d.y + 18"
+                  class="desvio"
+                  [class.tarde]="f.desvio"
+                />
+                <rect
+                  [attr.x]="f.x - 5"
+                  [attr.y]="d.y + 13"
+                  width="10"
+                  height="10"
+                  [attr.transform]="'rotate(45 ' + f.x + ' ' + (d.y + 18) + ')'"
+                  class="fantasma"
+                />
+              }
+              <rect
+                [attr.x]="d.x - 7"
+                [attr.y]="d.y + 11"
+                width="14"
+                height="14"
+                [attr.transform]="'rotate(45 ' + d.x + ' ' + (d.y + 18) + ')'"
+                class="diamante"
+              />
+              @if (d.h.estado === 'CUMPLIDO') {
+                <path
+                  [attr.d]="'M' + (d.x - 3.5) + ',' + (d.y + 18) + ' l2.5,2.5 l5,-5'"
+                  class="check"
+                />
+              }
+              <text
+                [attr.x]="Math.max(d.x, d.fantasma?.x ?? d.x) + 14"
+                [attr.y]="d.y + 22"
+                class="texto-hito"
+              >
+                {{ d.h.codigo }}
+              </text>
+            </g>
+          }
+        </g>
       </svg>
     </div>
   </div>
@@ -447,7 +487,12 @@
     <dl>
       @for (l of t.lineas; track l.etiqueta) {
         <div>
-          <dt>{{ l.etiqueta }}</dt>
+          <dt
+            [class.m-plan]="l.etiqueta === 'Planificado'"
+            [class.m-real]="l.etiqueta === 'Real'"
+          >
+            {{ l.etiqueta }}
+          </dt>
           <dd [class]="l.tono ? 't-' + l.tono : ''">{{ l.valor }}</dd>
         </div>
       }

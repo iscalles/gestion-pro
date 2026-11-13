@@ -1,3 +1,13 @@
+<!-- Pictograma del tipo de vínculo: predecesora arriba, sucesora abajo -->
+<ng-template #glifo let-t>
+  @let g = glifos[$any(t)];
+  <svg class="glifo" viewBox="0 0 24 14" width="24" height="14" aria-hidden="true">
+    <rect [attr.x]="g.a[0]" y="2" [attr.width]="g.a[1] - g.a[0]" height="3" rx="1" class="g-pred" />
+    <rect [attr.x]="g.b[0]" y="9" [attr.width]="g.b[1] - g.b[0]" height="3" rx="1" class="g-suc" />
+    <path [attr.d]="g.d" class="g-linea" />
+  </svg>
+</ng-template>
+
 <div class="detalle">
   @if (actividad().esHoja) {
     <div class="grilla">
@@ -143,7 +153,7 @@
             </thead>
             <tbody>
               @for (f of filas(); track f.clave) {
-                <tr [class.quitada]="f.quitar">
+                <tr [class.quitada]="f.quitar" [class.nueva]="f.id == null">
                   <td>
                     @if (f.id == null) {
                       <p-select
@@ -168,6 +178,7 @@
                     } @else {
                       <span class="pred-nombre">{{ nombreDe(f.predecesoraId) }}</span>
                     }
+                    <small class="regla" aria-hidden="true">{{ tipoDependencia[f.tipo].nombre }}</small>
                   </td>
                   <td>
                     <p-select
@@ -184,9 +195,22 @@
                       "
                       styleClass="select-tipo"
                     >
+                      <ng-template #selectedItem let-o>
+                        @if (o) {
+                          <span class="opcion-tipo">
+                            <ng-container
+                              *ngTemplateOutlet="glifo; context: { $implicit: o.value }"
+                            />
+                            <strong>{{ o.label }}</strong>
+                          </span>
+                        }
+                      </ng-template>
                       <ng-template #item let-o>
-                        <span class="opcion"
-                          ><strong>{{ o.label }}</strong> <small>{{ o.ayuda }}</small></span
+                        <span class="opcion opcion-tipo">
+                          <ng-container
+                            *ngTemplateOutlet="glifo; context: { $implicit: o.value }"
+                          />
+                          <strong>{{ o.label }}</strong> <small>{{ o.ayuda }}</small></span
                         >
                       </ng-template>
                     </p-select>
@@ -227,7 +251,10 @@
           </table>
         </div>
       } @else {
-        <p class="vacio">Sin predecesoras: empieza con el proyecto.</p>
+        <p class="vacio">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          Sin predecesoras: empieza con el proyecto.
+        </p>
       }
       <p class="nota">
         FS fin a inicio · SS inicio a inicio · FF fin a fin · SF inicio a fin. Desfase en días
@@ -260,14 +287,18 @@
         />
       </div>
     </div>
-    <dl class="derivados">
+    <dl class="gp-ficha derivados">
       <div>
         <dt>Duración</dt>
-        <dd>{{ actividad().duracionPlan }} días hábiles</dd>
+        <dd>
+          {{ actividad().duracionPlan }}<span class="gp-unidad"> días hábiles</span>
+        </dd>
       </div>
       <div>
         <dt>Avance</dt>
-        <dd>{{ actividad().avance | number: '1.0-2' }} %</dd>
+        <dd>
+          {{ actividad().avance | number: '1.0-2' }}<span class="gp-unidad"> %</span>
+        </dd>
       </div>
       <div>
         <dt>Inicio planificado</dt>
@@ -324,6 +355,7 @@
     </div>
   }
 
+  <!-- Acción principal siempre a la vista al pie del panel -->
   <div class="acciones">
     <p-button
       label="Cancelar"

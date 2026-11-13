@@ -1,5 +1,4 @@
 .pagina {
-  padding: var(--gp-space-8);
   max-width: 1600px;
 }
 
@@ -25,16 +24,27 @@
   }
 }
 
+// Resumen: cifras en una regleta con divisores finos
 .resumen {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gp-space-3) var(--gp-space-6);
+  row-gap: var(--gp-space-3);
   margin: 0;
 
-  div {
+  > div {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    padding: 0 var(--gp-space-5);
+    border-left: 1px solid var(--gp-line);
+
+    &:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+    &:last-child {
+      padding-right: 0;
+    }
   }
 
   dt {
@@ -44,51 +54,353 @@
 
   dd {
     margin: 0;
+    font-size: var(--gp-text-lg);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .gp-unidad {
+    font-size: 0.75em;
   }
 
   .con-atraso {
-    color: var(--gp-danger);
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    color: var(--gp-danger);
+
+    i {
+      font-size: 0.875rem;
+    }
   }
 }
 
+// Tabla y panel de detalle lado a lado desde 1200 px; debajo, uno sobre otro
 .layout {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--gp-space-5);
-  align-items: flex-start;
+  align-items: start;
+
+  @media (min-width: 1200px) {
+    grid-template-columns: minmax(0, 1fr) clamp(380px, 30%, 440px);
+  }
 }
 
 .tabla-panel {
-  flex: 999 1 600px;
   min-width: 0;
   overflow: hidden;
   container-type: inline-size;
+  transition: opacity var(--gp-dur-fast) var(--gp-ease-out);
+
+  &.recargando {
+    opacity: 0.55;
+  }
 }
 
-// Con poco ancho se ocultan tipo y responsable: la sangría y el peso ya indican el nivel.
-@container (max-width: 860px) {
+.tabla-herramientas {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gp-space-1);
+  padding: var(--gp-space-1) var(--gp-space-2);
+  border-bottom: 1px solid var(--gp-line);
+}
+
+.tabla-contenedor {
+  overflow-x: auto;
+}
+
+// ---------------------------------------------------------------- árbol EDT: filas de 36 px
+
+.arbol {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--gp-text-sm);
+
+  th,
+  td {
+    padding: 0 var(--gp-space-2);
+    border-bottom: 1px solid var(--gp-line);
+    text-align: left;
+    vertical-align: middle;
+
+    &:first-child {
+      padding-left: var(--gp-space-2);
+    }
+    &:last-child {
+      padding-right: var(--gp-space-4);
+    }
+  }
+
+  th {
+    height: 36px;
+    color: var(--gp-text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    border-bottom-color: var(--gp-line-strong);
+
+    // «Nombre» alineado con los códigos EDT de primer nivel (después del botón de plegar)
+    &:first-child {
+      padding-left: calc(var(--gp-space-2) + 30px);
+    }
+  }
+
+  td {
+    height: 36px;
+  }
+
+  .num {
+    text-align: right;
+  }
+
+  tbody tr {
+    cursor: pointer;
+
+    &:hover > td {
+      background: var(--gp-hover);
+    }
+
+    // Las etapas se separan con una línea más firme, no con una caja
+    &:has(+ .fila-etapa) > td {
+      border-bottom-color: var(--gp-line-strong);
+    }
+
+    &:last-child > td {
+      border-bottom: 0;
+    }
+
+    &.seleccionada > td {
+      background: var(--gp-accent-soft);
+    }
+  }
+}
+
+.col-tipo {
+  width: 96px;
+}
+.col-resp {
+  max-width: 160px;
+}
+.col-dur {
+  width: 60px;
+}
+.col-fecha {
+  width: 92px;
+}
+.col-costo {
+  width: 116px;
+}
+.col-avance {
+  width: 132px;
+}
+
+// Con poco ancho se ocultan columnas secundarias: la sangría y el peso ya indican el nivel.
+@container (max-width: 900px) {
   .col-tipo {
     display: none;
   }
 }
-@container (max-width: 700px) {
+@container (max-width: 780px) {
   .col-resp {
     display: none;
   }
 }
+@container (max-width: 600px) {
+  .col-avance {
+    width: 64px;
+  }
+  .avance p-progressbar {
+    display: none;
+  }
+}
+
+.nombre-celda {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 34px;
+}
+
+.plegar,
+.plegar-espacio {
+  flex: 0 0 24px;
+  height: 24px;
+}
+
+.plegar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--gp-radius-sm);
+  background: none;
+  color: var(--gp-text-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--gp-surface-sunken);
+    color: var(--gp-text);
+  }
+}
+
+.chevron {
+  font-size: 0.7rem;
+  transition: transform var(--gp-dur-fast) var(--gp-ease-out);
+
+  &.abierto {
+    transform: rotate(90deg);
+  }
+}
+
+.nombre-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--gp-space-2);
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--gp-radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--gp-text-md);
+  line-height: 1.3;
+  color: var(--gp-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.edt {
+  flex: none;
+  min-width: 2.75em;
+  color: var(--gp-text-subtle);
+  font-size: var(--gp-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.nombre-texto {
+  text-wrap: pretty;
+}
+
+.fila-padre .nombre-btn {
+  font-weight: 500;
+}
+
+.fila-etapa {
+  .nombre-btn {
+    font-weight: 700;
+  }
+  .edt {
+    color: var(--gp-text);
+  }
+}
+
+.seleccionada .nombre-btn {
+  color: var(--gp-accent-hover);
+}
+
+.atraso {
+  align-self: center;
+  color: var(--gp-danger);
+  font-size: 0.875rem;
+}
+
+.tipo,
+.resp {
+  color: var(--gp-text-muted);
+}
+
+.resp {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fecha {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--gp-text-muted);
+}
+
+td .gp-unidad {
+  margin-left: 1px;
+  font-size: 0.85em;
+}
+
+// Costo planificado; en ámbar y con flecha cuando el real lo supera (el detalle va en el texto oculto)
+.costo {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.costo-plan.sobre {
+  color: var(--gp-warn);
+  font-weight: 500;
+
+  i {
+    margin-right: 4px;
+    font-size: 0.625rem;
+  }
+}
+
+// Avance con la misma gramática que la carta: pista plan suave y avance plan
+.avance {
+  min-width: 0;
+
+  ::ng-deep .p-progressbar {
+    background: var(--gp-plan-soft);
+  }
+
+  ::ng-deep .p-progressbar-value {
+    background: var(--gp-plan);
+  }
+}
+
+// ---------------------------------------------------------------- movimiento del árbol
+
+.gp-anim-fila {
+  animation-delay: var(--retraso, 0ms);
+}
+
+.fila-sale {
+  animation: gp-desaparecer var(--gp-dur-exit) var(--gp-ease-out) both;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-anim-fila {
+    animation-delay: 0ms;
+  }
+}
+
+// ---------------------------------------------------------------- panel lateral de detalle
+
+@keyframes panel-entrar {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
 
 .lateral {
-  flex: 1 1 420px;
   min-width: 0;
-  max-width: 100%;
-  padding: var(--gp-space-4) var(--gp-space-5) var(--gp-space-5);
-  position: sticky;
-  top: var(--gp-space-4);
+  padding: var(--gp-space-4) var(--gp-space-5);
+  animation: panel-entrar var(--gp-dur-base) var(--gp-ease-out) backwards;
+  animation-delay: calc(var(--gp-stagger) * 2);
+
+  @media (min-width: 1200px) {
+    position: sticky;
+    top: var(--gp-space-4);
+    max-height: calc(100vh - var(--gp-space-8));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: gp-aparecer;
+  }
 }
 
 .lateral-cabecera {
@@ -122,12 +434,18 @@
   flex-shrink: 0;
 }
 
-.tabla-herramientas {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--gp-space-1);
-  padding: var(--gp-space-2) var(--gp-space-3);
-  border-bottom: 1px solid var(--gp-line);
+.nota-tabla {
+  margin: 0;
+  padding: var(--gp-space-3) var(--gp-space-4);
+  max-width: 96ch;
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
+  border-top: 1px solid var(--gp-line);
+}
+
+.lateral .nota-tabla {
+  padding: var(--gp-space-4) 0;
+  border-top: 0;
 }
 
 :host ::ng-deep {
@@ -136,209 +454,50 @@
     width: 100%;
   }
 
-  .tabla-arbol {
-    .p-datatable-table-container {
-      overflow-x: auto;
-    }
-
-    .p-datatable-thead > tr > th {
-      background: var(--gp-canvas);
-      color: var(--gp-text-muted);
-      font-size: var(--gp-text-sm);
-      font-weight: 500;
-      white-space: nowrap;
-      padding: 10px 12px;
-    }
-
-    .p-datatable-tbody > tr {
-      cursor: pointer;
-
-      > td {
-        border-color: var(--gp-line);
-        padding: 4px 12px;
-      }
-
-      &:hover {
-        background: var(--gp-canvas);
-      }
-
-      &.seleccionada {
-        background: var(--gp-accent-soft);
-        box-shadow: inset 3px 0 0 var(--gp-accent);
-      }
-
-      &.fila-etapa > td {
-        background: color-mix(in srgb, var(--gp-surface-sunken) 60%, transparent);
-      }
-
-      &.seleccionada.fila-etapa > td {
-        background: transparent;
-      }
-    }
-  }
-
-  .p-tabpanels {
+  .lateral .p-tabpanels {
     padding: var(--gp-space-4) 0 0;
   }
 
-  .p-tab {
+  .lateral .p-tab {
     font-size: var(--gp-text-md);
   }
 }
 
-.nombre-celda {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 36px;
+// ---------------------------------------------------------------- estados
+
+.esqueleto {
+  padding-bottom: var(--gp-space-3);
 }
 
-.plegar,
-.plegar-espacio {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-}
-
-.plegar {
-  display: inline-flex;
+.esq-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 5.5rem) 6.5rem;
   align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: var(--gp-radius-sm);
-  background: none;
-  color: var(--gp-text-muted);
-  cursor: pointer;
+  gap: var(--gp-space-4);
+  height: 36px;
+  padding-right: var(--gp-space-4);
+  border-bottom: 1px solid var(--gp-line);
 
-  &:hover {
-    background: var(--gp-surface-sunken);
-    color: var(--gp-text);
-  }
-
-  i {
-    font-size: 0.75rem;
+  &.esq-etapa {
+    border-top: 1px solid var(--gp-line-strong);
   }
 }
 
-.nombre-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 4px;
-  border: 0;
-  border-radius: var(--gp-radius-sm);
-  background: none;
-  font: inherit;
-  color: var(--gp-text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.fila-padre .nombre-btn {
-  font-weight: 500;
-}
-.fila-etapa .nombre-btn {
-  font-weight: 700;
-}
-
-.atraso {
-  color: var(--gp-danger);
-  font-size: 0.875rem;
-}
-
-.tipo {
-  font-size: var(--gp-text-sm);
-  color: var(--gp-text-muted);
-}
-
-.resp {
-  white-space: nowrap;
-}
-
-.fecha {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  font-size: var(--gp-text-sm);
-}
-
-td.num {
-  font-variant-numeric: tabular-nums;
-  font-size: var(--gp-text-sm);
-}
-
-.col-nombre {
-  min-width: 220px;
-}
-
-.col-avance {
-  width: 130px;
-}
-
-.avance {
+.esq-nombre {
   display: flex;
   align-items: center;
   gap: var(--gp-space-2);
-
-  p-progressbar {
-    flex: 1;
-  }
-
-  ::ng-deep .p-progressbar {
-    height: 6px;
-  }
-
-  span {
-    width: 48px;
-    font-size: var(--gp-text-sm);
-  }
 }
 
-.nota-tabla {
-  margin: 0;
-  padding: var(--gp-space-3) var(--gp-space-4);
-  font-size: var(--gp-text-sm);
-  color: var(--gp-text-muted);
-}
-
-.estado-carga {
+.estado-error {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--gp-space-3);
-  padding: var(--gp-space-5) var(--gp-space-4);
-
-  p-skeleton {
-    width: 100%;
-  }
+  padding: var(--gp-space-6) var(--gp-space-5);
 }
 
-.vacio-pagina,
-.vacio-plan {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gp-space-3);
-  padding: var(--gp-space-8) var(--gp-space-4);
-  text-align: center;
-
-  p {
-    margin: 0;
-    max-width: 52ch;
-    color: var(--gp-text-muted);
-  }
-}
-
-.vacio-plan {
-  i {
-    font-size: 1.75rem;
-    color: var(--gp-data);
-  }
-
-  h2 {
-    font-size: var(--gp-text-lg);
-  }
-}
+// ---------------------------------------------------------------- diálogo «Nueva actividad»
 
 .form-nueva {
   display: flex;
@@ -347,6 +506,7 @@ td.num {
 
   .nota-tabla {
     padding: 0;
+    border-top: 0;
   }
 }
 
@@ -393,34 +553,12 @@ td.num {
   gap: var(--gp-space-2);
 }
 
-@media (max-width: 1100px) {
-  .lateral {
-    position: static;
-  }
-}
-
 @media (max-width: 640px) {
-  .pagina {
-    padding: var(--gp-space-4);
-  }
-
   .fila-2 {
     grid-template-columns: minmax(0, 1fr);
   }
-}
 
-.edt {
-  flex: none;
-  min-width: 2.5em;
-  color: var(--gp-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.costo {
-  font-size: var(--gp-text-sm);
-  font-variant-numeric: tabular-nums;
-
-  &.sobre {
-    color: var(--gp-warn);
+  .resumen > div {
+    padding: 0 var(--gp-space-3);
   }
 }

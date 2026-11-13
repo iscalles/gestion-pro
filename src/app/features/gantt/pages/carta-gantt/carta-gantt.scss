@@ -1,6 +1,6 @@
+// La carta es la protagonista: la página usa todo el ancho disponible.
 .pagina {
-  padding: var(--gp-space-8);
-  max-width: 1800px;
+  max-width: none;
 }
 
 .barra {
@@ -25,16 +25,27 @@
   }
 }
 
+// Resumen: cifras en una regleta con divisores finos
 .resumen {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gp-space-3) var(--gp-space-6);
+  row-gap: var(--gp-space-3);
   margin: 0;
 
-  div {
+  > div {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    padding: 0 var(--gp-space-5);
+    border-left: 1px solid var(--gp-line);
+
+    &:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+    &:last-child {
+      padding-right: 0;
+    }
   }
 
   dt {
@@ -44,15 +55,25 @@
 
   dd {
     margin: 0;
+    font-size: var(--gp-text-lg);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .gp-unidad {
+    font-size: 0.75em;
   }
 
   .alerta {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     color: var(--gp-danger);
+
+    i {
+      font-size: 0.875rem;
+    }
   }
 }
 
@@ -66,7 +87,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--gp-space-3);
-  padding: var(--gp-space-3) var(--gp-space-4);
+  padding: var(--gp-space-2) var(--gp-space-4);
   border-bottom: 1px solid var(--gp-line);
 }
 
@@ -74,11 +95,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--gp-space-3);
+  gap: var(--gp-space-2) var(--gp-space-4);
 }
 
 .plegado {
   display: inline-flex;
+  padding-left: var(--gp-space-2);
+  border-left: 1px solid var(--gp-line);
 }
 
 .interruptor {
@@ -89,6 +112,17 @@
   font-size: var(--gp-text-sm);
   cursor: pointer;
 }
+
+// Mientras llega el plan de otro proyecto la carta actual se atenúa
+.lamina {
+  transition: opacity var(--gp-dur-fast) var(--gp-ease-out);
+
+  &.recargando {
+    opacity: 0.55;
+  }
+}
+
+// ---------------------------------------------------------------- leyenda
 
 .leyenda {
   display: flex;
@@ -113,14 +147,13 @@
 }
 
 .l-plan {
-  fill: var(--gp-accent-soft);
-  stroke: var(--gp-data);
+  fill: var(--gp-plan-soft);
 }
 .l-progreso {
-  fill: var(--gp-accent);
+  fill: var(--gp-plan);
 }
 .l-real {
-  fill: var(--gp-sidebar);
+  fill: var(--gp-real);
 }
 .l-desvio {
   fill: var(--gp-warn);
@@ -129,10 +162,13 @@
   fill: var(--gp-line-strong);
 }
 .l-tope {
-  fill: var(--gp-sidebar);
+  fill: var(--gp-text);
 }
 .l-atraso {
   fill: var(--gp-danger);
+}
+.l-signo {
+  fill: var(--gp-surface);
 }
 .l-h-ok {
   fill: var(--gp-ok);
@@ -152,51 +188,51 @@
   stroke-dasharray: 2 2;
 }
 .l-feriado {
-  fill: rgba(138, 83, 0, 0.12);
+  fill: url(#gp-feriado);
+  stroke: var(--gp-line);
 }
 .l-vinculo {
   fill: none;
-  stroke: var(--gp-data);
-  stroke-width: 1.25;
+  stroke: var(--gp-text-subtle);
+  stroke-width: 1;
 }
 .l-punta {
-  fill: var(--gp-data);
+  fill: var(--gp-text-subtle);
 }
 
-.estado-carga {
+// ---------------------------------------------------------------- estados
+
+.esqueleto {
+  padding-bottom: var(--gp-space-4);
+}
+
+.esq-fila {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  border-bottom: 1px solid var(--gp-line);
+}
+
+.esq-nombre {
+  flex: 0 0 min(440px, 40%);
+  padding-right: var(--gp-space-6);
+  border-right: 1px solid var(--gp-line);
+}
+
+.esq-tiempo {
+  flex: 1;
+  min-width: 0;
+}
+
+.estado-error {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--gp-space-3);
-  padding: var(--gp-space-5) var(--gp-space-4);
-
-  p-skeleton {
-    width: 100%;
-  }
+  padding: var(--gp-space-6) var(--gp-space-5);
 }
 
-.vacio {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--gp-space-3);
-  padding: var(--gp-space-8) var(--gp-space-4);
-  text-align: center;
-
-  i {
-    font-size: 1.75rem;
-    color: var(--gp-data);
-  }
-
-  h2 {
-    font-size: var(--gp-text-lg);
-  }
-
-  p {
-    margin: 0;
-    color: var(--gp-text-muted);
-  }
-}
+// ---------------------------------------------------------------- panel de detalle
 
 .drawer-titulo {
   display: flex;
@@ -219,8 +255,8 @@
   width: 100%;
 }
 
-@media (max-width: 640px) {
-  .pagina {
-    padding: var(--gp-space-4);
+@media (max-width: 1100px) {
+  .resumen > div {
+    padding: 0 var(--gp-space-4);
   }
 }
