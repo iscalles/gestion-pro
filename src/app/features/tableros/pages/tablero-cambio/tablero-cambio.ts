@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -12,6 +12,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { SelectorProyecto } from '../../../../shared/ui/selector-proyecto/selector-proyecto';
 import { StatusBadge } from '../../../../shared/ui/status-badge/status-badge';
+import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
+import { Contar } from '../../../../shared/ui/movimiento/contar';
+import { prefiereMenosMovimiento } from '../../../../shared/ui/movimiento/movimiento';
 import { ClpPipe } from '../../../../shared/pipes/clp.pipe';
 import { GraficoBarras, SerieBarras } from '../../../../shared/graficos/grafico-barras';
 import { BarraApilada, Segmento } from '../../../../shared/graficos/barra-apilada';
@@ -24,13 +27,15 @@ import { TablerosService } from '../../data/tableros.service';
 import { Conteo, TableroCambio as Tablero } from '../../models/tablero.model';
 import { KpiMosaico } from '../../ui/kpi-mosaico/kpi-mosaico';
 import { ListaAlertas } from '../../ui/lista-alertas/lista-alertas';
+import { partirUnidad } from '../../ui/unidad';
 
 @Component({
   selector: 'gp-tablero-cambio',
+  // Resaltar va antes que Contar: en un mismo elemento, el resaltado toma el texto final antes de que empiece el conteo.
   imports: [
-    DatePipe, DecimalPipe, RouterLink, FormsModule, ButtonModule, InputTextModule, MessageModule, SelectModule,
-    SkeletonModule, TableModule, TooltipModule, PageHeader, SelectorProyecto, StatusBadge, ClpPipe, GraficoBarras,
-    BarraApilada, KpiMosaico, ListaAlertas,
+    DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, FormsModule, ButtonModule, InputTextModule, MessageModule,
+    SelectModule, SkeletonModule, TableModule, TooltipModule, PageHeader, SelectorProyecto, StatusBadge, Resaltar, Contar,
+    ClpPipe, GraficoBarras, BarraApilada, KpiMosaico, ListaAlertas,
   ],
   templateUrl: './tablero-cambio.html',
   styleUrl: './tablero-cambio.scss',
@@ -53,6 +58,13 @@ export class TableroCambio {
   protected readonly fmtEjeDias = (v: number) => `${v} d`;
   protected readonly fmtCantidad = (v: number | null | undefined) => (v == null ? '—' : fmtEntero(v));
   protected readonly fmtEjeCantidad = (v: number) => String(v);
+  protected readonly partir = partirUnidad;
+
+  /**
+   * Primera carga (solo visual): true hasta que terminan las animaciones de la primera vez que se muestran
+   * datos en esta visita. Filtros, cambio de proyecto y recálculos ya no repiten el conteo, el dibujo ni la cascada.
+   */
+  protected readonly entrada = signal(!prefiereMenosMovimiento());
 
   /** Matriz de riesgo: filas de impacto (alto arriba) × columnas de probabilidad. */
   protected readonly impactos = [
@@ -70,6 +82,11 @@ export class TableroCambio {
     effect(() => {
       const id = this.ctx.proyectoId();
       if (id != null) untracked(() => this.cargar());
+    });
+    effect((alLimpiar) => {
+      if (!this.datos() || !untracked(this.entrada)) return;
+      const t = setTimeout(() => this.entrada.set(false), 1200);
+      alLimpiar(() => clearTimeout(t));
     });
   }
 
@@ -159,7 +176,7 @@ export class TableroCambio {
         { nombre: 'A tiempo', color: ESTADO.ok, valor: e.aTiempo },
         { nombre: 'Fuera de plazo', color: ESTADO.warn, valor: e.tarde },
         { nombre: 'Vencida en curso', color: ESTADO.danger, valor: e.vencidas },
-        { nombre: 'En curso a tiempo', color: '#a9c8c9', valor: e.enCurso },
+        { nombre: 'En curso a tiempo', color: RAMPA[2], valor: e.enCurso },
       ],
     }));
     const escala = Math.max(1, ...filas.map((f) => f.segmentos.reduce((a, s) => a + s.valor, 0)));

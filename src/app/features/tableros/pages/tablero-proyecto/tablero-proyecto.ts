@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -12,6 +12,9 @@ import { TableModule } from 'primeng/table';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { SelectorProyecto } from '../../../../shared/ui/selector-proyecto/selector-proyecto';
 import { StatusBadge, Tono } from '../../../../shared/ui/status-badge/status-badge';
+import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
+import { Contar } from '../../../../shared/ui/movimiento/contar';
+import { prefiereMenosMovimiento } from '../../../../shared/ui/movimiento/movimiento';
 import { ClpPipe } from '../../../../shared/pipes/clp.pipe';
 import { GraficoLineas, SerieLinea } from '../../../../shared/graficos/grafico-lineas';
 import { GraficoBarras, SerieBarras } from '../../../../shared/graficos/grafico-barras';
@@ -23,13 +26,15 @@ import { TablerosService } from '../../data/tableros.service';
 import { TableroProyecto as Tablero } from '../../models/tablero.model';
 import { KpiMosaico } from '../../ui/kpi-mosaico/kpi-mosaico';
 import { ListaAlertas } from '../../ui/lista-alertas/lista-alertas';
+import { partirUnidad } from '../../ui/unidad';
 
 @Component({
   selector: 'gp-tablero-proyecto',
+  // Resaltar va antes que Contar: en un mismo elemento, el resaltado toma el texto final antes de que empiece el conteo.
   imports: [
-    DatePipe, DecimalPipe, RouterLink, FormsModule, ButtonModule, InputTextModule, MessageModule, ProgressBarModule,
-    SelectModule, SkeletonModule, TableModule, PageHeader, SelectorProyecto, StatusBadge, ClpPipe, GraficoLineas,
-    GraficoBarras, KpiMosaico, ListaAlertas,
+    DatePipe, DecimalPipe, NgTemplateOutlet, RouterLink, FormsModule, ButtonModule, InputTextModule, MessageModule,
+    ProgressBarModule, SelectModule, SkeletonModule, TableModule, PageHeader, SelectorProyecto, StatusBadge, Resaltar,
+    Contar, ClpPipe, GraficoLineas, GraficoBarras, KpiMosaico, ListaAlertas,
   ],
   templateUrl: './tablero-proyecto.html',
   styleUrl: './tablero-proyecto.scss',
@@ -48,6 +53,13 @@ export class TableroProyecto {
   protected readonly fmtPesos = fmtPesos;
   protected readonly fmtPesosEje = fmtPesosEje;
   protected readonly fmtEjePct = (v: number) => `${v} %`;
+  protected readonly partir = partirUnidad;
+
+  /**
+   * Primera carga (solo visual): true hasta que terminan las animaciones de la primera vez que se muestran
+   * datos en esta visita. Filtros, cambio de proyecto y recálculos ya no repiten el conteo ni el dibujo.
+   */
+  protected readonly entrada = signal(!prefiereMenosMovimiento());
 
   constructor() {
     effect(() => {
@@ -57,6 +69,11 @@ export class TableroProyecto {
           this.filtro = { etapaId: null, responsableId: null, desde: '', hasta: '' };
           this.cargar();
         });
+    });
+    effect((alLimpiar) => {
+      if (!this.datos() || !untracked(this.entrada)) return;
+      const t = setTimeout(() => this.entrada.set(false), 1200);
+      alLimpiar(() => clearTimeout(t));
     });
   }
 
@@ -142,6 +159,18 @@ export class TableroProyecto {
         return { id: p.profesionalId, nombre: p.nombre, pico, sobre: p.semanas.filter((s) => s.sobreasignada).length };
       })
       .sort((a, b) => b.sobre - a.sobre || b.pico - a.pico);
+  });
+
+  /**
+   * Posición de la marca «Hoy» en la lista de hitos (solo visual): antes del primer hito comprometido
+   * después de hoy. Solo se muestra si la lista viene en orden de fecha comprometida.
+   */
+  protected readonly hoyEnHitos = computed(() => {
+    const fechas = (this.datos()?.hitos ?? []).map((h) => (h.fechaComprometida ?? '').slice(0, 10));
+    if (fechas.length === 0 || fechas.some((f, i) => i > 0 && f < fechas[i - 1])) return -1;
+    const hoy = hoyIso();
+    const i = fechas.findIndex((f) => f > hoy);
+    return i < 0 ? fechas.length : i;
   });
 
   protected estadoActividad(e: string): { etiqueta: string; tono: Tono } {

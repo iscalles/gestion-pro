@@ -1,14 +1,264 @@
-.fecha {
-  flex-basis: 150px;
+// Seguimiento del proyecto: regleta de cifras y rejilla de paneles. Solo presentación.
+
+.acciones-filtro {
+  display: flex;
+  flex: none;
+  gap: var(--gp-space-1);
+}
+
+// Mientras se recalcula con otro filtro, el tablero queda atenuado (los datos anteriores siguen a la vista)
+.tablero {
+  container-type: inline-size;
+  transition: opacity var(--gp-dur-base) var(--gp-ease-out);
 }
 
 .recargando {
   opacity: 0.6;
-  transition: opacity 0.2s;
 }
 
-.bloque {
-  margin-top: var(--gp-space-4);
+// Regleta: la cifra principal ocupa dos filas a la izquierda; a su lado, costo y SPI · CPI (notas largas)
+// en una fila y actividades, hitos y alertas en la otra. Seis columnas finas para que no queden huecos.
+.regleta {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.3fr) repeat(6, minmax(0, 1fr));
+  margin-bottom: var(--gp-space-4);
+
+  > .gp-cifra:not(.principal) {
+    grid-column: span 2;
+  }
+
+  > .gp-cifra:nth-child(2),
+  > .gp-cifra:nth-child(3) {
+    grid-column: span 3;
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  dd.gp-cifra-nota {
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+}
+
+.principal {
+  grid-row: span 2;
+  justify-content: center;
+  gap: var(--gp-space-1);
+  padding: var(--gp-space-5) var(--gp-space-6);
+
+  .valor {
+    font-size: var(--gp-text-4xl);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+  }
+}
+
+.medidor {
+  margin: var(--gp-space-2) 0 var(--gp-space-1);
+
+  .pista {
+    position: relative;
+    display: block;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--gp-surface-sunken);
+  }
+
+  .real {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--gp-real);
+  }
+
+  .plan {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--gp-plan);
+  }
+}
+
+// Rejilla de paneles: la curva S manda; luego indicadores e hitos, actividades y el equipo.
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    'curva curva etapas'
+    'kpi kpi hitos'
+    'act act act'
+    'costo carga alertas';
+  gap: var(--gp-space-4);
+
+  > * {
+    min-width: 0;
+  }
+}
+
+.a-curva { grid-area: curva; }
+.a-etapas { grid-area: etapas; }
+.a-kpi { grid-area: kpi; }
+.a-hitos { grid-area: hitos; }
+.a-act { grid-area: act; }
+.a-costo { grid-area: costo; }
+.a-carga { grid-area: carga; }
+.a-alertas { grid-area: alertas; }
+
+@container (max-width: 999px) {
+  .regleta {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+
+    > .principal {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+  }
+
+  .rejilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'curva curva'
+      'etapas hitos'
+      'kpi kpi'
+      'act act'
+      'costo carga'
+      'alertas alertas';
+  }
+}
+
+@container (max-width: 479px) {
+  .regleta > .gp-cifra:not(.principal) {
+    grid-column: span 3;
+  }
+
+  .regleta > .gp-cifra:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@container (max-width: 639px) {
+
+  .rejilla {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'curva' 'etapas' 'kpi' 'hitos' 'act' 'costo' 'carga' 'alertas';
+  }
+}
+
+.sin-datos {
+  margin: 0;
+  padding: var(--gp-space-10) 0;
+  text-align: center;
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
+}
+
+.vacio-lista {
+  padding: var(--gp-space-3) 0;
+  font-size: var(--gp-text-sm);
+}
+
+.conteo-kpi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+
+  i {
+    margin-right: 5px;
+    font-size: 0.8125rem;
+    vertical-align: -1px;
+  }
+
+  .c-ok i { color: var(--gp-ok); }
+  .c-warn i { color: var(--gp-warn); }
+  .c-danger i { color: var(--gp-danger); }
+}
+
+// Hitos: línea de tiempo vertical con rombos y la marca Hoy (la misma de la curva S y la Gantt)
+.hitos {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    bottom: 14px;
+    left: 5px;
+    width: 1px;
+    background: var(--gp-line-strong);
+  }
+}
+
+.hito {
+  position: relative;
+  display: grid;
+  grid-template-columns: 11px minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--gp-space-3);
+  padding: var(--gp-space-2) 0;
+
+  .texto {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .titulo {
+    font-size: var(--gp-text-sm);
+    line-height: 1.4;
+  }
+
+  .fechas {
+    font-size: var(--gp-text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.rombo {
+  width: 9px;
+  height: 9px;
+  margin: 6px 0 0 1px;
+  border: 1.5px solid var(--gp-text-subtle);
+  border-radius: 1px;
+  background: var(--gp-surface);
+  transform: rotate(45deg);
+
+  &[data-tono='ok'] { border-color: var(--gp-ok); background: var(--gp-ok); }
+  &[data-tono='warn'] { border-color: var(--gp-warn); background: var(--gp-warn-soft); }
+  &[data-tono='danger'] { border-color: var(--gp-danger); background: var(--gp-danger); }
+  &[data-tono='accent'] { border-color: var(--gp-accent); }
+}
+
+.hoy {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--gp-space-2);
+  height: 18px;
+  font-size: var(--gp-text-xs);
+  font-weight: 700;
+  color: var(--gp-accent);
+
+  span {
+    padding-right: 2px;
+    background: var(--gp-surface);
+  }
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1.5px;
+    background: var(--gp-accent);
+  }
 }
 
 .cab {
@@ -21,30 +271,9 @@
   font-weight: 700;
 }
 
-.hitos {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  li {
-    display: flex;
-    align-items: center;
-    gap: var(--gp-space-3);
-    padding: 8px 10px;
-    border: 1px solid var(--gp-line);
-    border-radius: var(--gp-radius-sm);
-  }
-
-  .texto {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-    font-size: var(--gp-text-sm);
-  }
+// Después de la primera carga, las barras de avance de la tabla no vuelven a desplegarse al filtrar
+.quieto ::ng-deep .p-progressbar-value {
+  animation: none;
 }
 
 .carga {
@@ -57,7 +286,7 @@
 
   li {
     display: grid;
-    grid-template-columns: minmax(110px, 170px) 1fr 64px;
+    grid-template-columns: minmax(88px, 150px) minmax(0, 1fr) 4.5rem;
     grid-template-areas: 'n p v' '. s s';
     align-items: center;
     column-gap: var(--gp-space-3);
@@ -74,16 +303,16 @@
   .pista {
     grid-area: p;
     position: relative;
-    height: 12px;
-    background: var(--gp-surface-sunken);
+    height: 10px;
     border-radius: 2px 4px 4px 2px;
+    background: var(--gp-surface-sunken);
   }
 
   .uso {
     display: block;
     height: 100%;
-    background: #609496;
     border-radius: 2px 4px 4px 2px;
+    background: var(--gp-data);
 
     &.sobre {
       background: var(--gp-danger);
@@ -96,13 +325,19 @@
     bottom: -3px;
     left: 66.67%;
     width: 2px;
-    background: var(--gp-text);
+    background: var(--gp-text-muted);
   }
 
   .pico {
     grid-area: v;
     text-align: right;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    i {
+      font-size: 0.75rem;
+    }
   }
 
   .sem {
@@ -112,7 +347,37 @@
 }
 
 .nota-carga {
-  margin: var(--gp-space-3) 0 0;
+  margin: var(--gp-space-4) 0 0;
   font-size: var(--gp-text-xs);
   color: var(--gp-text-muted);
+}
+
+.estado-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gp-space-3);
+  padding: var(--gp-space-4) var(--gp-space-5);
+}
+
+// Esqueleto de carga
+.esqueleto {
+  p-skeleton {
+    display: block;
+  }
+
+  .gp-cifra,
+  .gp-seccion {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-3);
+  }
+}
+
+.esq-filtros {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 0.8fr 0.8fr;
+  gap: var(--gp-space-3);
+  margin-bottom: var(--gp-space-5);
 }

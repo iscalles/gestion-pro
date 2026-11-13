@@ -1,55 +1,98 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SemaforoBadge } from '../../../../shared/ui/semaforo/semaforo';
+import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
 import { Sparkline } from '../../../../shared/graficos/sparkline';
 import { fmtValorKpi } from '../../../../shared/util/formato';
 import { Kpi } from '../../../kpi/models/kpi.model';
+import { partirUnidad } from '../unidad';
 
-/** Mosaico de KPI: valor, semáforo (con ícono y texto), meta y tendencia. */
+/**
+ * Indicadores en una regleta de filas (no tarjetas): nombre y ámbito, valor grande con su meta debajo,
+ * tendencia y semáforo (con ícono y texto). En paneles anchos se reparte en dos columnas.
+ */
 @Component({
   selector: 'gp-kpi-mosaico',
-  imports: [RouterLink, SemaforoBadge, Sparkline],
+  imports: [RouterLink, SemaforoBadge, Resaltar, Sparkline],
   template: `
     @if (kpis().length === 0) {
       <p class="gp-tenue vacio">Sin indicadores activos.</p>
     } @else {
-      <ul class="mosaico">
+      <ul class="lista">
         @for (k of kpis(); track k.id) {
+          @let v = valor(k);
           <li class="kpi" [class.rojo]="k.semaforo === 'ROJO'">
-            <div class="cab">
-              <span class="gp-codigo">{{ k.codigo }}</span>
-              <gp-semaforo [valor]="k.semaforo" />
+            <div class="ident">
+              <span class="titulo">
+                <span class="gp-codigo">{{ k.codigo }}</span>
+                <a class="nombre" routerLink="/kpi" [queryParams]="{ proyecto: proyectoId() }" [title]="k.objetivo ?? ''">{{ k.nombre }}</a>
+              </span>
+              @if (k.ambitoNombre) {
+                <span class="ambito">{{ k.ambitoNombre }}</span>
+              }
             </div>
-            <a class="nombre" routerLink="/kpi" [queryParams]="{ proyecto: proyectoId() }" [title]="k.objetivo ?? ''">{{ k.nombre }}</a>
-            <div class="valor">
-              <strong>{{ fmt(k.valor, k.unidad) }}</strong>
+            <div class="cifra">
+              <strong class="valor" [class.sin-dato]="k.valor == null" gpResaltar>{{ v.valor }}<span class="gp-unidad">{{ v.unidad }}</span></strong>
+              <span class="meta">Meta {{ fmt(k.meta, k.unidad) }}</span>
+            </div>
+            <div class="tendencia">
               @if (k.historial.length > 1) {
                 <gp-sparkline [valores]="tendencia(k)" />
               }
             </div>
-            <span class="meta">Meta {{ fmt(k.meta, k.unidad) }}{{ k.ambitoNombre ? ' · ' + k.ambitoNombre : '' }}</span>
+            <gp-semaforo class="semaforo" [valor]="k.semaforo" />
           </li>
         }
       </ul>
     }
   `,
   styles: `
-    .mosaico { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--gp-space-3); }
-    .kpi { display: flex; flex-direction: column; gap: 4px; padding: var(--gp-space-3); border: 1px solid var(--gp-line); border-radius: var(--gp-radius-md); background: var(--gp-surface); min-width: 0; }
-    .kpi.rojo { border-color: color-mix(in srgb, var(--gp-danger) 45%, var(--gp-line)); }
-    .cab { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-    .nombre { font-size: var(--gp-text-sm); color: var(--gp-text); text-decoration: none; line-height: 1.3; min-height: 2.6em; }
+    :host { display: block; container-type: inline-size; }
+    .lista {
+      list-style: none; margin: 0; padding: 0;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 500px), 1fr)); column-gap: var(--gp-space-8);
+    }
+    .kpi {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(6.5rem, auto) 96px 8.5rem;
+      grid-template-areas: 'ident cifra tendencia semaforo';
+      align-items: center; column-gap: var(--gp-space-4);
+      min-height: 60px; padding: var(--gp-space-2) 0; border-bottom: 1px solid var(--gp-line);
+    }
+    .ident { grid-area: ident; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .titulo { display: flex; align-items: baseline; gap: var(--gp-space-2); min-width: 0; font-size: var(--gp-text-sm); line-height: 1.35; }
+    .gp-codigo { flex: none; font-size: var(--gp-text-xs); }
+    .nombre {
+      color: var(--gp-text); font-weight: 500; text-decoration: none;
+    }
     .nombre:hover { color: var(--gp-accent); text-decoration: underline; }
-    .valor { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .valor strong { font-size: var(--gp-text-xl); font-variant-numeric: tabular-nums; }
-    .meta { font-size: var(--gp-text-xs); color: var(--gp-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ambito { font-size: var(--gp-text-xs); color: var(--gp-text-muted); }
+    .cifra { grid-area: cifra; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+    .valor { font-size: var(--gp-text-xl); font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .kpi.rojo .valor { color: var(--gp-danger); }
+    .valor.sin-dato { font-size: var(--gp-text-sm); font-weight: 500; color: var(--gp-text-muted); }
+    .meta { font-size: var(--gp-text-xs); color: var(--gp-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tendencia { grid-area: tendencia; display: flex; align-items: center; }
+    .semaforo { grid-area: semaforo; justify-self: start; }
     .vacio { margin: 0; }
+    /* Angosto, o dos columnas que aún no dan espacio al nombre: el nombre ocupa la fila y debajo van semáforo y tendencia */
+    @container (max-width: 559px) or ((min-width: 1032px) and (max-width: 1279px)) {
+      .kpi {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: 'ident cifra' 'semaforo tendencia';
+        row-gap: var(--gp-space-2);
+      }
+      .tendencia { justify-content: flex-end; }
+    }
   `,
 })
 export class KpiMosaico {
   readonly kpis = input.required<Kpi[]>();
   readonly proyectoId = input<number | null>(null);
   protected readonly fmt = fmtValorKpi;
+
+  protected valor(k: Kpi) {
+    return partirUnidad(fmtValorKpi(k.valor, k.unidad));
+  }
 
   protected tendencia(k: Kpi): number[] {
     return [...k.historial]

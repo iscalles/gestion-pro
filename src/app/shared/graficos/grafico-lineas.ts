@@ -1,4 +1,5 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, OnInit, computed, input, signal } from '@angular/core';
+import { EntradaGrafico, anchoDelHost } from './entrada';
 import { escala } from './paleta';
 
 export interface SerieLinea {
@@ -10,13 +11,19 @@ export interface SerieLinea {
   area?: boolean;
 }
 
+let secuencia = 0;
+
 /**
  * Gráfico de líneas en SVG: un solo eje Y, líneas de 2 px, leyenda siempre visible para 2+ series,
  * cruz y tooltip al pasar el mouse o con el teclado, y tabla con los datos.
+ *
+ * El SVG se dibuja al ancho real de su contenedor (el texto de los ejes no se escala). En la primera carga
+ * las series se revelan de izquierda a derecha con un recorte que escala en X; `[animar]="false"` lo omite.
  */
 @Component({
   selector: 'gp-grafico-lineas',
   template: `
+    @let g = geo();
     @if (series().length > 1) {
       <ul class="gp-leyenda">
         @for (s of series(); track s.nombre) {
@@ -29,60 +36,61 @@ export interface SerieLinea {
     }
     <div class="lienzo" (mouseleave)="activo.set(null)">
       <svg
-        [attr.viewBox]="'0 0 ' + W + ' ' + H"
+        [attr.viewBox]="'0 0 ' + g.W + ' ' + g.H"
         role="img"
         [attr.aria-label]="titulo()"
         tabindex="0"
         (keydown)="teclado($event)"
         (blur)="activo.set(null)"
       >
-        @for (t of geo().ticks; track t) {
-          <line class="grid" [attr.x1]="M.l" [attr.x2]="W - M.r" [attr.y1]="y(t)" [attr.y2]="y(t)" />
-          <text class="eje" [attr.x]="M.l - 8" [attr.y]="y(t) + 4" text-anchor="end">{{ formatoEje()(t) }}</text>
+        @if (entrada.activa()) {
+          <defs>
+            <clipPath [attr.id]="idRecorte">
+              <rect class="gp-anim-desplegar-x" [attr.x]="g.M.l - 6" y="0" [attr.width]="g.W - g.M.l - g.M.r + 12" [attr.height]="g.H" />
+            </clipPath>
+          </defs>
         }
-        @for (e of etiquetasX(); track e.i) {
-          <text class="eje" [attr.x]="x(e.i)" [attr.y]="H - 8" text-anchor="middle">{{ e.texto }}</text>
+        @for (t of g.ticks; track t) {
+          <line class="grid" [class.base]="t === 0" [attr.x1]="g.M.l" [attr.x2]="g.W - g.M.r" [attr.y1]="g.y(t)" [attr.y2]="g.y(t)" />
+          <text class="eje" [attr.x]="g.M.l - 8" [attr.y]="g.y(t) + 4" text-anchor="end">{{ formatoEje()(t) }}</text>
+        }
+        @for (e of g.etiquetasX; track e.i) {
+          <text class="eje" [attr.x]="g.x(e.i)" [attr.y]="g.H - 8" [attr.text-anchor]="e.ancla">{{ e.texto }}</text>
         }
         @if (marca() != null) {
-          <line class="hoy" [attr.x1]="x(marca()!)" [attr.x2]="x(marca()!)" [attr.y1]="M.t" [attr.y2]="H - M.b" />
-          <text class="eje hoy-txt" [attr.x]="x(marca()!) + 4" [attr.y]="M.t + 10">{{ marcaTexto() }}</text>
+          <line class="hoy" [attr.x1]="g.x(marca()!)" [attr.x2]="g.x(marca()!)" [attr.y1]="g.M.t - 4" [attr.y2]="g.H - g.M.b" />
+          <text class="hoy-txt" [attr.x]="g.x(marca()!)" [attr.y]="g.M.t - 9" text-anchor="middle">{{ marcaTexto() }}</text>
         }
-        @for (s of geo().trazos; track s.nombre) {
-          @if (s.area) {
-            <path [attr.d]="s.area" [attr.fill]="s.color" fill-opacity="0.1" />
+        <g [attr.clip-path]="entrada.activa() ? 'url(#' + idRecorte + ')' : null">
+          @for (s of g.trazos; track s.nombre) {
+            @if (s.area) {
+              <path class="area" [attr.d]="s.area" [attr.fill]="s.color" />
+            }
+            <path class="trazo" [attr.d]="s.d" [attr.stroke]="s.color" [attr.stroke-dasharray]="s.discontinua ? '6 4' : null" />
+            @if (s.fin; as f) {
+              <circle class="punto" [attr.cx]="f.x" [attr.cy]="f.y" r="3.5" [attr.fill]="s.color" />
+            }
           }
-          <path
-            [attr.d]="s.d"
-            fill="none"
-            [attr.stroke]="s.color"
-            stroke-width="2"
-            stroke-linejoin="round"
-            stroke-linecap="round"
-            [attr.stroke-dasharray]="s.discontinua ? '6 4' : null"
-          />
-          @if (s.fin; as f) {
-            <circle [attr.cx]="f.x" [attr.cy]="f.y" r="4" [attr.fill]="s.color" stroke="#fff" stroke-width="2" />
-          }
-        }
+        </g>
         @if (activo() != null) {
-          <line class="cruz" [attr.x1]="x(activo()!)" [attr.x2]="x(activo()!)" [attr.y1]="M.t" [attr.y2]="H - M.b" />
+          <line class="cruz" [attr.x1]="g.x(activo()!)" [attr.x2]="g.x(activo()!)" [attr.y1]="g.M.t" [attr.y2]="g.H - g.M.b" />
           @for (s of series(); track s.nombre) {
             @if (s.valores[activo()!] != null) {
-              <circle [attr.cx]="x(activo()!)" [attr.cy]="y(s.valores[activo()!]!)" r="4" [attr.fill]="s.color" stroke="#fff" stroke-width="2" />
+              <circle class="punto" [attr.cx]="g.x(activo()!)" [attr.cy]="g.y(s.valores[activo()!]!)" r="4" [attr.fill]="s.color" />
             }
           }
         }
         <rect
           class="captura"
-          [attr.x]="M.l"
-          [attr.y]="M.t"
-          [attr.width]="W - M.l - M.r"
-          [attr.height]="H - M.t - M.b"
+          [attr.x]="g.M.l"
+          [attr.y]="g.M.t"
+          [attr.width]="g.W - g.M.l - g.M.r"
+          [attr.height]="g.H - g.M.t - g.M.b"
           (mousemove)="mover($event)"
         />
       </svg>
       @if (activo() != null) {
-        <div class="tip" [style.left.%]="(x(activo()!) / W) * 100" [class.izq]="activo()! > etiquetas().length / 2">
+        <div class="tip" [style.left.%]="(g.x(activo()!) / g.W) * 100" [class.izq]="activo()! > etiquetas().length / 2">
           <strong>{{ etiquetas()[activo()!] }}</strong>
           @for (s of series(); track s.nombre) {
             <span><i [style.background]="s.color"></i>{{ s.nombre }}: {{ formato()(s.valores[activo()!]) }}</span>
@@ -115,28 +123,32 @@ export interface SerieLinea {
     </details>
   `,
   styles: `
-    :host { display: block; }
+    :host { display: block; min-width: 0; }
     .lienzo { position: relative; }
     svg { display: block; width: 100%; height: auto; overflow: visible; }
-    svg:focus-visible { outline: none; box-shadow: var(--gp-focus); border-radius: 4px; }
-    .grid { stroke: var(--gp-line); stroke-width: 1; }
-    .eje { font-size: 11px; fill: var(--gp-text-muted); font-variant-numeric: tabular-nums; }
-    .hoy { stroke: var(--gp-text-muted); stroke-width: 1; }
-    .hoy-txt { font-weight: 600; }
-    .cruz { stroke: var(--gp-text-muted); stroke-width: 1; }
+    svg:focus-visible { outline: none; box-shadow: var(--gp-focus); border-radius: var(--gp-radius-sm); }
+    .grid { stroke: var(--gp-line); stroke-width: 1; shape-rendering: crispEdges; }
+    .grid.base { stroke: var(--gp-line-strong); }
+    .eje { font-size: 12px; fill: var(--gp-text-subtle); font-variant-numeric: tabular-nums; }
+    .hoy { stroke: var(--gp-accent); stroke-width: 1.5; }
+    .hoy-txt { font-size: 12px; font-weight: 700; fill: var(--gp-accent); }
+    .area { fill-opacity: 0.08; }
+    .trazo { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .punto { stroke: var(--gp-surface); stroke-width: 2; }
+    .cruz { stroke: var(--gp-text-subtle); stroke-width: 1; stroke-dasharray: 3 3; }
     .captura { fill: transparent; }
     .tip {
       position: absolute; top: 0; transform: translateX(12px); pointer-events: none;
       display: flex; flex-direction: column; gap: 2px; min-width: 160px;
-      padding: 8px 10px; background: var(--gp-surface); border: 1px solid var(--gp-line-strong);
-      border-radius: var(--gp-radius-md); box-shadow: 0 4px 12px rgba(12, 49, 51, 0.12);
-      font-size: var(--gp-text-sm); white-space: nowrap; z-index: 2;
+      padding: 8px 10px; background: var(--gp-surface); border: 1px solid var(--gp-line);
+      border-radius: var(--gp-radius-md); box-shadow: var(--gp-shadow-overlay);
+      font-size: var(--gp-text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 2;
     }
     .tip.izq { transform: translateX(calc(-100% - 12px)); }
     .tip i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
   `,
 })
-export class GraficoLineas {
+export class GraficoLineas implements OnInit {
   readonly titulo = input.required<string>();
   readonly etiquetas = input.required<string[]>();
   readonly series = input.required<SerieLinea[]>();
@@ -147,60 +159,64 @@ export class GraficoLineas {
   readonly marca = input<number | null>(null);
   readonly marcaTexto = input('Hoy');
   readonly maximo = input<number | null>(null);
+  /** Revela las series de izquierda a derecha la primera vez que se dibuja esta instancia. */
+  readonly animar = input(true);
 
-  protected readonly W = 640;
-  protected readonly H = 260;
-  protected readonly M = { t: 12, r: 16, b: 28, l: 56 };
   protected readonly activo = signal<number | null>(null);
+  protected readonly entrada = new EntradaGrafico();
+  protected readonly idRecorte = `gp-recorte-curva-${++secuencia}`;
+  private readonly ancho = anchoDelHost();
+
+  ngOnInit(): void {
+    this.entrada.iniciar(this.animar());
+  }
 
   protected readonly geo = computed(() => {
+    const W = Math.max(240, this.ancho());
+    const H = Math.round(Math.min(300, Math.max(240, W * 0.38)));
     const todos = this.series().flatMap((s) => s.valores.filter((v): v is number => v != null));
     const { max, ticks } = escala(this.maximo() ?? Math.max(0, ...todos));
-    this.max = max;
+    const fmtEje = this.formatoEje();
+    const largo = Math.max(1, ...ticks.map((t) => fmtEje(t).length));
+    const M = { t: this.marca() != null ? 26 : 14, r: 16, b: 30, l: Math.max(36, Math.ceil(largo * 6.8) + 14) };
+    const n = Math.max(this.etiquetas().length - 1, 1);
+    const util = W - M.l - M.r;
+    const x = (i: number) => M.l + (i / n) * util;
+    const y = (v: number) => H - M.b - (v / max) * (H - M.t - M.b);
+
     const trazos = this.series().map((s) => {
       let d = '';
-      let ultimo: { x: number; y: number } | null = null;
+      let fin: { x: number; y: number } | null = null;
       let primeroX: number | null = null;
       s.valores.forEach((v, i) => {
         if (v == null) return;
-        const px = this.x(i);
-        const py = this.y(v);
+        const px = x(i);
+        const py = y(v);
         d += (d ? ' L' : 'M') + px.toFixed(1) + ' ' + py.toFixed(1);
         primeroX ??= px;
-        ultimo = { x: px, y: py };
+        fin = { x: px, y: py };
       });
-      const fin = ultimo as { x: number; y: number } | null;
-      const area =
-        s.area && fin && primeroX != null ? `${d} L${fin.x.toFixed(1)} ${this.y(0)} L${primeroX} ${this.y(0)} Z` : null;
-      return { nombre: s.nombre, color: s.color, discontinua: !!s.discontinua, d, area, fin };
+      const f = fin as { x: number; y: number } | null;
+      const area = s.area && f && primeroX != null ? `${d} L${f.x.toFixed(1)} ${y(0)} L${primeroX} ${y(0)} Z` : null;
+      return { nombre: s.nombre, color: s.color, discontinua: !!s.discontinua, d, area, fin: f };
     });
-    return { ticks, trazos };
+
+    // Etiquetas del eje X: tantas como quepan (≈ 72 px cada una), sin chocar con la última.
+    const total = this.etiquetas().length;
+    const cada = Math.max(1, Math.ceil(total / Math.max(2, Math.floor(util / 72))));
+    const etiquetasX = this.etiquetas()
+      .map((texto, i) => ({ i, texto, ancla: i === 0 ? 'start' : i === total - 1 ? 'end' : 'middle' }))
+      .filter((e) => e.i === total - 1 || (e.i % cada === 0 && total - 1 - e.i >= cada * 0.6));
+
+    return { W, H, M, x, y, ticks, trazos, etiquetasX };
   });
-
-  private max = 1;
-
-  protected readonly etiquetasX = computed(() => {
-    const n = this.etiquetas().length;
-    const cada = Math.max(1, Math.ceil(n / 8));
-    return this.etiquetas()
-      .map((texto, i) => ({ i, texto }))
-      .filter((e) => e.i % cada === 0 || e.i === n - 1);
-  });
-
-  protected x(i: number): number {
-    const n = Math.max(this.etiquetas().length - 1, 1);
-    return this.M.l + (i / n) * (this.W - this.M.l - this.M.r);
-  }
-
-  protected y(v: number): number {
-    return this.H - this.M.b - (v / this.max) * (this.H - this.M.t - this.M.b);
-  }
 
   protected mover(ev: MouseEvent): void {
+    const g = this.geo();
     const rect = (ev.target as SVGRectElement).ownerSVGElement!.getBoundingClientRect();
-    const px = ((ev.clientX - rect.left) / rect.width) * this.W;
+    const px = ((ev.clientX - rect.left) / rect.width) * g.W;
     const n = this.etiquetas().length - 1;
-    const i = Math.round(((px - this.M.l) / (this.W - this.M.l - this.M.r)) * n);
+    const i = Math.round(((px - g.M.l) / (g.W - g.M.l - g.M.r)) * n);
     this.activo.set(Math.max(0, Math.min(n, i)));
   }
 

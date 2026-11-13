@@ -6,21 +6,18 @@
   </gp-page-header>
 
   @if (ctx.cargando()) {
-    <div class="panel gp-estado-carga" aria-busy="true">
-      @for (i of [1, 2, 3]; track i) {
-        <p-skeleton height="1.75rem" />
-      }
-    </div>
+    <ng-container *ngTemplateOutlet="esqueleto; context: { filtros: true }" />
   } @else if (ctx.proyectos().length === 0) {
     <div class="panel gp-vacio">
       @if (ctx.error(); as e) {
         <p-message severity="error" [text]="e" />
       } @else {
+        <i class="pi pi-folder-open" aria-hidden="true"></i>
         <p>Todavía no tienes proyectos asignados.</p>
       }
     </div>
   } @else {
-    <form class="gp-barra" (ngSubmit)="cargar()">
+    <form class="gp-barra gp-filtros" (ngSubmit)="cargar()">
       <gp-selector-proyecto [ctx]="ctx" />
       <div class="gp-campo">
         <label for="tc-tipo">Tipo</label>
@@ -38,73 +35,101 @@
         <label for="tc-hasta">Hasta</label>
         <input pInputText type="date" id="tc-hasta" name="hasta" [(ngModel)]="filtro.hasta" />
       </div>
-      <p-button label="Aplicar fechas" type="submit" icon="pi pi-filter" [outlined]="true" />
-      @if (hayFiltro()) {
-        <p-button label="Quitar filtros" [text]="true" (onClick)="limpiar()" />
-      }
+      <div class="acciones-filtro">
+        <p-button label="Aplicar fechas" type="submit" icon="pi pi-filter" [outlined]="true" />
+        @if (hayFiltro()) {
+          <p-button label="Quitar filtros" [text]="true" (onClick)="limpiar()" />
+        }
+      </div>
     </form>
 
     @if (error(); as e) {
-      <div class="panel gp-estado-carga">
+      <div class="panel estado-error">
         <p-message severity="error" [text]="e" />
         <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar()" />
       </div>
     } @else if (!datos()) {
-      <div class="panel gp-estado-carga" aria-busy="true">
-        <p-skeleton height="6rem" />
-        <p-skeleton height="16rem" />
-      </div>
+      <ng-container *ngTemplateOutlet="esqueleto; context: { filtros: false }" />
     } @else {
       @let d = datos()!;
       @let r = d.resumen;
-      <div [class.recargando]="cargando()">
-        <dl class="gp-cifras">
+      @let evaluacion = partir(fmtDias(r.diasEvaluacionPromedio));
+      <div class="tablero" [class.recargando]="cargando()" [attr.aria-busy]="cargando()">
+        <dl class="gp-cifras regleta">
           <div class="gp-cifra">
             <dt>Solicitudes</dt>
-            <dd>{{ r.total }}</dd>
-            <span class="gp-cifra-nota">{{ r.enCurso }} en curso · {{ r.cerradas }} {{ r.cerradas === 1 ? 'cerrada' : 'cerradas' }}</span>
+            <dd gpResaltar [gpContar]="entrada()">{{ r.total }}</dd>
+            <dd class="gp-cifra-nota" gpResaltar>{{ r.enCurso }} en curso · {{ r.cerradas }} {{ r.cerradas === 1 ? 'cerrada' : 'cerradas' }}</dd>
           </div>
           <div class="gp-cifra">
             <dt>Tasa de aprobación</dt>
-            <dd>{{ r.tasaAprobacion == null ? '—' : (r.tasaAprobacion | number: '1.0-1') + ' %' }}</dd>
-            <span class="gp-cifra-nota">{{ r.aprobadas }} {{ r.aprobadas === 1 ? 'aprobada' : 'aprobadas' }} · {{ r.rechazadas }} {{ r.rechazadas === 1 ? 'rechazada' : 'rechazadas' }}</span>
+            <dd gpResaltar [gpContar]="entrada()">
+              @if (r.tasaAprobacion == null) {
+                —
+              } @else {
+                {{ r.tasaAprobacion | number: '1.0-1' }}<span class="gp-unidad"> %</span>
+              }
+            </dd>
+            <dd class="gp-cifra-nota" gpResaltar>
+              {{ r.aprobadas }} {{ r.aprobadas === 1 ? 'aprobada' : 'aprobadas' }} · {{ r.rechazadas }} {{ r.rechazadas === 1 ? 'rechazada' : 'rechazadas' }}
+            </dd>
           </div>
           <div class="gp-cifra">
             <dt>Tiempo medio</dt>
-            <dd>{{ fmtDias(r.diasEvaluacionPromedio) }}</dd>
-            <span class="gp-cifra-nota">de evaluación · {{ fmtDias(r.diasImplementacionPromedio) }} de implementación</span>
+            <dd gpResaltar [gpContar]="entrada()">{{ evaluacion.valor }}<span class="gp-unidad">{{ evaluacion.unidad }}</span></dd>
+            <dd class="gp-cifra-nota" gpResaltar>de evaluación · {{ fmtDias(r.diasImplementacionPromedio) }} de implementación</dd>
           </div>
           <div class="gp-cifra">
             <dt>Costo real de los cambios</dt>
-            <dd [class.gp-negativo]="r.costoReal > r.costoEstimado">{{ r.costoReal | clp }}</dd>
-            <span class="gp-cifra-nota">Estimado {{ r.costoEstimado | clp }}</span>
+            <dd gpResaltar [gpContar]="entrada()" [class.gp-negativo]="r.costoReal > r.costoEstimado">
+              @if (r.costoReal > r.costoEstimado) {
+                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+              }
+              {{ r.costoReal | clp }}
+            </dd>
+            <dd class="gp-cifra-nota" gpResaltar>Estimado {{ r.costoEstimado | clp }}</dd>
           </div>
           <div class="gp-cifra">
             <dt>Impacto en el plan</dt>
-            <dd [class.gp-negativo]="r.diasDesviacion > 0">{{ r.diasDesviacion > 0 ? '+' : '' }}{{ r.diasDesviacion }} d</dd>
-            <span class="gp-cifra-nota">{{ r.impactoCostoPlan > 0 ? '+' : '' }}{{ r.impactoCostoPlan | clp }} en costo planificado</span>
+            <dd gpResaltar [gpContar]="entrada()" [class.gp-negativo]="r.diasDesviacion > 0">
+              {{ r.diasDesviacion > 0 ? '+' : '' }}{{ r.diasDesviacion }}<span class="gp-unidad"> d</span>
+            </dd>
+            <dd class="gp-cifra-nota" gpResaltar>{{ r.impactoCostoPlan > 0 ? '+' : '' }}{{ r.impactoCostoPlan | clp }} en costo planificado</dd>
           </div>
           <div class="gp-cifra">
             <dt>Atrasadas · riesgo crítico</dt>
-            <dd [class.gp-negativo]="r.atrasadas + r.riesgosCriticos > 0">{{ r.atrasadas }} · {{ r.riesgosCriticos }}</dd>
+            <dd gpResaltar [gpContar]="entrada()" [class.gp-negativo]="r.atrasadas + r.riesgosCriticos > 0">
+              {{ r.atrasadas }}<span class="sep">·</span>{{ r.riesgosCriticos }}
+            </dd>
           </div>
           <div class="gp-cifra">
             <dt>Acciones correctivas</dt>
-            <dd>{{ r.accionesAbiertas }} <span class="gp-tenue">{{ r.accionesAbiertas === 1 ? 'abierta' : 'abiertas' }}</span></dd>
-            <span class="gp-cifra-nota" [class.gp-negativo]="r.accionesVencidas > 0">{{ r.accionesVencidas }} {{ r.accionesVencidas === 1 ? 'vencida' : 'vencidas' }} · {{ r.accionesCerradas }} {{ r.accionesCerradas === 1 ? 'cerrada' : 'cerradas' }}</span>
+            <dd gpResaltar [gpContar]="entrada()">{{ r.accionesAbiertas }} <span class="gp-unidad">{{ r.accionesAbiertas === 1 ? 'abierta' : 'abiertas' }}</span></dd>
+            <dd class="gp-cifra-nota" gpResaltar [class.gp-negativo]="r.accionesVencidas > 0">
+              {{ r.accionesVencidas }} {{ r.accionesVencidas === 1 ? 'vencida' : 'vencidas' }} · {{ r.accionesCerradas }} {{ r.accionesCerradas === 1 ? 'cerrada' : 'cerradas' }}
+            </dd>
           </div>
           <div class="gp-cifra">
             <dt>Efectividad · adopción</dt>
-            <dd>
-              {{ r.efectividadPromedio == null ? '—' : (r.efectividadPromedio | number: '1.0-0') + ' %' }} ·
-              {{ r.adopcionPromedio == null ? '—' : (r.adopcionPromedio | number: '1.0-0') + ' %' }}
+            <dd gpResaltar [gpContar]="entrada()">
+              @if (r.efectividadPromedio == null) {
+                —
+              } @else {
+                {{ r.efectividadPromedio | number: '1.0-0' }}<span class="gp-unidad"> %</span>
+              }
+              <span class="sep">·</span>
+              @if (r.adopcionPromedio == null) {
+                —
+              } @else {
+                {{ r.adopcionPromedio | number: '1.0-0' }}<span class="gp-unidad"> %</span>
+              }
             </dd>
-            <span class="gp-cifra-nota">Promedio de solicitudes cerradas</span>
+            <dd class="gp-cifra-nota">Promedio de solicitudes cerradas</dd>
           </div>
         </dl>
 
-        <div class="gp-rejilla">
-          <section class="panel gp-seccion">
+        <div class="rejilla">
+          <section class="panel gp-seccion a-matriz">
             <div class="gp-seccion-cabecera">
               <div>
                 <h2>Matriz de riesgo</h2>
@@ -116,32 +141,39 @@
                 <caption class="sr-only">Cantidad de solicitudes por probabilidad (columnas) e impacto (filas)</caption>
                 <thead>
                   <tr>
-                    <td class="eje-y">Impacto ↓ / Probabilidad →</td>
+                    <td class="esquina">
+                      <span class="eje-imp">Impacto ↓</span><span class="sr-only"> / </span><span class="eje-prob">Probabilidad →</span>
+                    </td>
                     @for (p of probabilidades; track p.clave) {
                       <th scope="col">{{ p.nombre }}</th>
                     }
                   </tr>
                 </thead>
                 <tbody>
-                  @for (i of impactos; track i.clave) {
+                  @for (i of impactos; track i.clave; let fi = $index) {
                     <tr>
                       <th scope="row">{{ i.nombre }}</th>
-                      @for (p of probabilidades; track p.clave) {
+                      @for (p of probabilidades; track p.clave; let ci = $index) {
                         @let c = celda(p.clave, i.clave);
+                        @let crit = critica(p.clave, i.clave);
                         <td>
                           <div
                             class="celda"
-                            [class.critica]="critica(p.clave, i.clave)"
+                            [class.critica]="crit"
+                            [class.oscura]="tinta(c.cantidad) === '#ffffff'"
+                            [class.vacia]="c.cantidad <= 0"
+                            [class.gp-anim-celda]="entrada()"
+                            [style.animation-delay.ms]="(2 - fi + ci) * 40"
                             [style.background]="fondo(c.cantidad)"
                             [style.color]="tinta(c.cantidad)"
                             [pTooltip]="c.solicitudes.length ? c.solicitudes.join(', ') : 'Sin solicitudes'"
                             tabindex="0"
                             [attr.aria-label]="'Probabilidad ' + p.nombre + ', impacto ' + i.nombre + ': ' + c.cantidad + (c.solicitudes.length ? ' (' + c.solicitudes.join(', ') + ')' : '')"
                           >
-                            <strong>{{ c.cantidad }}</strong>
-                            @if (critica(p.clave, i.clave) && c.cantidad > 0) {
+                            @if (crit) {
                               <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
                             }
+                            <strong>{{ c.cantidad }}</strong>
                           </div>
                         </td>
                       }
@@ -151,81 +183,123 @@
               </table>
             </div>
           </section>
-          <section class="panel gp-seccion">
+
+          <section class="panel gp-seccion a-plazos">
             <div class="gp-seccion-cabecera">
               <div>
                 <h2>Cumplimiento de plazos por etapa</h2>
                 <p>Etapas completadas a tiempo o fuera de su fecha límite, y las que siguen en curso.</p>
               </div>
             </div>
-            <ul class="gp-leyenda">
-              <li><span class="gp-muestra" [style.background]="'#1f6b3a'"></span><i class="pi pi-check-circle" aria-hidden="true"></i> A tiempo</li>
-              <li><span class="gp-muestra" [style.background]="'#8a5300'"></span><i class="pi pi-exclamation-circle" aria-hidden="true"></i> Fuera de plazo</li>
-              <li><span class="gp-muestra" [style.background]="'#a3231b'"></span><i class="pi pi-times-circle" aria-hidden="true"></i> Vencida en curso</li>
-              <li><span class="gp-muestra" [style.background]="'#a9c8c9'"></span>En curso a tiempo</li>
+            <ul class="gp-leyenda leyenda-plazos">
+              <li class="l-ok"><span class="gp-muestra"></span><i class="pi pi-check-circle" aria-hidden="true"></i> A tiempo</li>
+              <li class="l-warn"><span class="gp-muestra"></span><i class="pi pi-exclamation-circle" aria-hidden="true"></i> Fuera de plazo</li>
+              <li class="l-danger"><span class="gp-muestra"></span><i class="pi pi-times-circle" aria-hidden="true"></i> Vencida en curso</li>
+              <li class="l-curso"><span class="gp-muestra"></span><i class="pi pi-clock" aria-hidden="true"></i> En curso a tiempo</li>
             </ul>
             <div class="apiladas">
-              @for (f of etapas().filas; track f.etiqueta) {
-                <gp-barra-apilada [etiqueta]="f.etiqueta" [segmentos]="f.segmentos" [escala]="etapas().escala" />
+              @for (f of etapas().filas; track f.etiqueta; let i = $index) {
+                <gp-barra-apilada [etiqueta]="f.etiqueta" [segmentos]="f.segmentos" [escala]="etapas().escala" [animar]="entrada()" [indice]="i" />
               }
             </div>
           </section>
-        </div>
 
-        <div class="gp-rejilla bloque">
-          <section class="panel gp-seccion">
+          <section class="panel gp-seccion a-costos">
             <div class="gp-seccion-cabecera"><h2>Costo estimado y real por solicitud</h2></div>
             @if (costos(); as g) {
-              <gp-grafico-barras titulo="Costo estimado y real por solicitud" nombreCategoria="Solicitud" [categorias]="g.categorias" [series]="g.series" [formato]="fmtPesos" [formatoEje]="fmtPesosEje" />
+              <gp-grafico-barras
+                titulo="Costo estimado y real por solicitud"
+                nombreCategoria="Solicitud"
+                [categorias]="g.categorias"
+                [series]="g.series"
+                [formato]="fmtPesos"
+                [formatoEje]="fmtPesosEje"
+                [animar]="entrada()"
+              />
             } @else {
-              <p class="gp-tenue">Sin solicitudes en el filtro.</p>
+              <p class="sin-datos">Sin solicitudes en el filtro.</p>
             }
           </section>
-          <section class="panel gp-seccion">
+
+          <section class="panel gp-seccion a-tiempos">
             <div class="gp-seccion-cabecera"><h2>Tiempos de evaluación e implementación</h2></div>
             @if (tiempos(); as g) {
-              <gp-grafico-barras titulo="Días de evaluación e implementación por solicitud" nombreCategoria="Solicitud" [categorias]="g.categorias" [series]="g.series" [formato]="fmtDias" [formatoEje]="fmtEjeDias" [enteros]="true" />
+              <gp-grafico-barras
+                titulo="Días de evaluación e implementación por solicitud"
+                nombreCategoria="Solicitud"
+                [categorias]="g.categorias"
+                [series]="g.series"
+                [formato]="fmtDias"
+                [formatoEje]="fmtEjeDias"
+                [enteros]="true"
+                [animar]="entrada()"
+              />
             } @else {
-              <p class="gp-tenue">Todavía no hay solicitudes decididas.</p>
+              <p class="sin-datos">Todavía no hay solicitudes decididas.</p>
             }
           </section>
-        </div>
 
-        <div class="gp-rejilla bloque tres">
-          <section class="panel gp-seccion">
+          <section class="panel gp-seccion a-estado">
             <div class="gp-seccion-cabecera"><h2>Por estado</h2></div>
             @if (porEstado(); as g) {
-              <gp-grafico-barras titulo="Solicitudes por estado" nombreCategoria="Estado" [categorias]="g.categorias" [series]="g.series" [formato]="fmtCantidad" [formatoEje]="fmtEjeCantidad" [enteros]="true" />
+              <gp-grafico-barras
+                titulo="Solicitudes por estado"
+                nombreCategoria="Estado"
+                [categorias]="g.categorias"
+                [series]="g.series"
+                [formato]="fmtCantidad"
+                [formatoEje]="fmtEjeCantidad"
+                [enteros]="true"
+                [animar]="entrada()"
+              />
             }
           </section>
-          <section class="panel gp-seccion">
+
+          <section class="panel gp-seccion a-tipo">
             <div class="gp-seccion-cabecera"><h2>Por tipo</h2></div>
             @if (porTipo(); as g) {
-              <gp-grafico-barras titulo="Solicitudes por tipo" nombreCategoria="Tipo" [categorias]="g.categorias" [series]="g.series" [formato]="fmtCantidad" [formatoEje]="fmtEjeCantidad" [enteros]="true" />
+              <gp-grafico-barras
+                titulo="Solicitudes por tipo"
+                nombreCategoria="Tipo"
+                [categorias]="g.categorias"
+                [series]="g.series"
+                [formato]="fmtCantidad"
+                [formatoEje]="fmtEjeCantidad"
+                [enteros]="true"
+                [animar]="entrada()"
+              />
             }
           </section>
-          <section class="panel gp-seccion">
+
+          <section class="panel gp-seccion a-etapa">
             <div class="gp-seccion-cabecera"><h2>En curso por etapa</h2></div>
             @if (porEtapa(); as g) {
               @if (g.categorias.length) {
-                <gp-grafico-barras titulo="Solicitudes en curso por etapa" nombreCategoria="Etapa" [categorias]="g.categorias" [series]="g.series" [formato]="fmtCantidad" [formatoEje]="fmtEjeCantidad" [enteros]="true" />
+                <gp-grafico-barras
+                  titulo="Solicitudes en curso por etapa"
+                  nombreCategoria="Etapa"
+                  [categorias]="g.categorias"
+                  [series]="g.series"
+                  [formato]="fmtCantidad"
+                  [formatoEje]="fmtEjeCantidad"
+                  [enteros]="true"
+                  [animar]="entrada()"
+                />
               } @else {
-                <p class="gp-tenue">Ninguna solicitud en curso.</p>
+                <p class="sin-datos">Ninguna solicitud en curso.</p>
               }
             }
           </section>
-        </div>
 
-        <section class="panel gp-seccion bloque">
-          <div class="gp-seccion-cabecera">
-            <h2>Indicadores de gestión del cambio</h2>
-            <p-button label="Ver indicadores" [text]="true" icon="pi pi-arrow-right" iconPos="right" routerLink="/kpi" [queryParams]="{ proyecto: ctx.proyectoId() }" />
-          </div>
-          <gp-kpi-mosaico [kpis]="d.kpis" [proyectoId]="ctx.proyectoId()" />
-        </section>
+          <section class="panel gp-seccion a-kpi">
+            <div class="gp-seccion-cabecera">
+              <h2>Indicadores de gestión del cambio</h2>
+              <p-button label="Ver indicadores" [text]="true" icon="pi pi-arrow-right" iconPos="right" routerLink="/kpi" [queryParams]="{ proyecto: ctx.proyectoId() }" />
+            </div>
+            <gp-kpi-mosaico [kpis]="d.kpis" [proyectoId]="ctx.proyectoId()" />
+          </section>
 
-        <div class="gp-rejilla bloque">
-          <section class="panel">
+          <section class="panel a-acciones">
             <div class="gp-seccion gp-seccion-cabecera cab"><h2>Acciones correctivas</h2></div>
             <p-table [value]="d.acciones" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '560px' }" [rows]="8" [paginator]="d.acciones.length > 8">
               <ng-template #header>
@@ -253,7 +327,8 @@
               </ng-template>
             </p-table>
           </section>
-          <section class="panel gp-seccion">
+
+          <section class="panel gp-seccion a-alertas">
             <div class="gp-seccion-cabecera"><h2>Alertas de cambios</h2></div>
             <gp-lista-alertas [alertas]="d.alertas" />
           </section>
@@ -262,3 +337,40 @@
     }
   }
 </div>
+
+<!-- Carga: esqueleto con la forma del tablero (filtros, regleta de 8 cifras, matriz y plazos). -->
+<ng-template #esqueleto let-filtros="filtros">
+  <div class="tablero esqueleto" aria-busy="true">
+    @if (filtros) {
+      <div class="esq-filtros" aria-hidden="true">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <p-skeleton height="2.5rem" />
+        }
+      </div>
+    }
+    <div class="gp-cifras regleta" aria-hidden="true">
+      @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+        <div class="gp-cifra">
+          <p-skeleton width="55%" height="0.875rem" />
+          <p-skeleton width="45%" height="1.75rem" />
+        </div>
+      }
+    </div>
+    <div class="rejilla" aria-hidden="true">
+      <div class="panel gp-seccion a-matriz">
+        <p-skeleton width="45%" height="1.25rem" />
+        <div class="esq-matriz">
+          @for (i of [1, 2, 3, 4, 5, 6, 7, 8, 9]; track i) {
+            <p-skeleton height="4rem" />
+          }
+        </div>
+      </div>
+      <div class="panel gp-seccion a-plazos">
+        <p-skeleton width="40%" height="1.25rem" />
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <p-skeleton height="1.125rem" />
+        }
+      </div>
+    </div>
+  </div>
+</ng-template>

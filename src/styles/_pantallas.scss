@@ -24,6 +24,42 @@
   margin-bottom: var(--gp-space-5);
 }
 
+// Filtros de los tableros: selectores en la primera fila (con su texto completo) y el rango de fechas
+// con su botón en la segunda. En pantallas muy anchas todo cabe en una sola fila.
+.gp-filtros {
+  gap: var(--gp-space-3);
+
+  &::before {
+    content: '';
+    order: 1;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  > .gp-campo {
+    flex: 1 1 200px;
+  }
+
+  > .gp-campo.gp-proyecto {
+    flex: 2 1 320px;
+  }
+
+  > .gp-campo.fecha {
+    order: 2;
+    flex: 0 0 168px;
+  }
+
+  > :last-child {
+    order: 2;
+  }
+
+  @media (min-width: 1600px) {
+    &::before {
+      display: none;
+    }
+  }
+}
+
 .gp-campo {
   display: flex;
   flex-direction: column;
@@ -140,6 +176,26 @@
     font-size: var(--gp-text-xs);
     line-height: 1.4;
     color: var(--gp-text-subtle);
+  }
+
+  // Pares de cifras (SPI · CPI, 90 % · 85 %): el punto separa por margen, no por espacios de la plantilla
+  .sep {
+    margin: 0 0.3em;
+    font-weight: 400;
+    color: var(--gp-line-strong);
+  }
+
+  // Ícono junto a una cifra (flecha bajo 1, advertencia): pequeño, a la altura de las minúsculas
+  dd i.pi {
+    margin-right: 0.25em;
+    font-size: 0.55em;
+    vertical-align: 0.2em;
+  }
+
+  .gp-cifra-nota i.pi {
+    margin-right: 2px;
+    font-size: 0.7rem;
+    vertical-align: 0;
   }
 }
 
@@ -334,7 +390,7 @@ td.gp-vacio {
   .p-progressbar-value {
     transition: none;
     transform-origin: left center;
-    animation: gp-desplegar-x var(--gp-dur-dibujo) var(--gp-ease-out) both;
+    animation: gp-desplegar-x var(--gp-dur-dibujo) var(--gp-ease-out) backwards;
   }
 
   span {

@@ -1,47 +1,151 @@
-.fecha {
-  flex-basis: 150px;
+// Gestión del cambio: regleta de 8 cifras, matriz de riesgo y paneles. Solo presentación.
+
+.acciones-filtro {
+  display: flex;
+  flex: none;
+  gap: var(--gp-space-1);
+}
+
+// Mientras se recalcula con otro filtro, el tablero queda atenuado (los datos anteriores siguen a la vista)
+.tablero {
+  container-type: inline-size;
+  transition: opacity var(--gp-dur-base) var(--gp-ease-out);
 }
 
 .recargando {
   opacity: 0.6;
-  transition: opacity 0.2s;
 }
 
-.bloque {
-  margin-top: var(--gp-space-4);
+// Regleta de 8 cifras: 4 × 2 (2 × 4 en angosto), siempre sin huecos
+.regleta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: var(--gp-space-4);
+
+  dd {
+    margin: 0;
+  }
+
+  dd.gp-cifra-nota {
+    font-weight: 400;
+    letter-spacing: 0;
+  }
 }
 
-.tres {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-areas:
+    'matriz matriz plazos plazos plazos plazos'
+    'costos costos costos tiempos tiempos tiempos'
+    'estado estado tipo tipo etapa etapa'
+    'kpi kpi kpi kpi kpi kpi'
+    'acciones acciones acciones acciones alertas alertas';
+  gap: var(--gp-space-4);
+
+  > * {
+    min-width: 0;
+  }
 }
 
-.cab {
+.a-matriz { grid-area: matriz; }
+.a-plazos { grid-area: plazos; }
+.a-costos { grid-area: costos; }
+.a-tiempos { grid-area: tiempos; }
+.a-estado { grid-area: estado; }
+.a-tipo { grid-area: tipo; }
+.a-etapa { grid-area: etapa; }
+.a-kpi { grid-area: kpi; }
+.a-acciones { grid-area: acciones; }
+.a-alertas { grid-area: alertas; }
+
+@container (max-width: 999px) {
+  .rejilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'matriz plazos'
+      'costos tiempos'
+      'estado tipo'
+      'etapa etapa'
+      'kpi kpi'
+      'acciones acciones'
+      'alertas alertas';
+  }
+}
+
+@container (max-width: 639px) {
+  .regleta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rejilla {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'matriz' 'plazos' 'costos' 'tiempos' 'estado' 'tipo' 'etapa' 'kpi' 'acciones' 'alertas';
+  }
+}
+
+.sin-datos {
   margin: 0;
+  padding: var(--gp-space-10) 0;
+  text-align: center;
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
 }
 
+// Matriz 3 × 3: rampa turquesa por cantidad; las críticas llevan anillo de peligro, ícono y número
 .matriz {
   overflow-x: auto;
 
   table {
+    width: 100%;
+    max-width: 460px;
+    margin: 0 auto;
     border-collapse: separate;
     border-spacing: 4px;
-    margin: 0 auto;
+    table-layout: fixed;
   }
 
-  th {
-    font-weight: 500;
+  thead th {
+    padding: 0 0 6px;
+    vertical-align: bottom;
+    text-align: center;
     font-size: var(--gp-text-sm);
-    color: var(--gp-text-muted);
-    padding: 4px 8px;
+    font-weight: 700;
+    color: var(--gp-text);
   }
 
-  .eje-y {
-    font-size: var(--gp-text-xs);
-    color: var(--gp-text-muted);
+  tbody th {
+    padding: 0 var(--gp-space-2) 0 0;
+    text-align: right;
+    font-size: var(--gp-text-sm);
+    font-weight: 700;
+    color: var(--gp-text);
   }
 
   td {
     padding: 0;
+  }
+}
+
+.esquina {
+  width: 6.25rem;
+  padding: 0 0 6px;
+  vertical-align: bottom;
+  font-size: var(--gp-text-xs);
+  line-height: 1.35;
+  color: var(--gp-text-muted);
+
+  span {
+    display: block;
+  }
+
+  .eje-imp {
+    margin-bottom: 2px;
+    text-align: left;
+  }
+
+  .eje-prob {
+    text-align: right;
   }
 }
 
@@ -50,15 +154,40 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 96px;
   height: 64px;
-  border: 1px solid var(--gp-line);
-  border-radius: var(--gp-radius-sm);
-  font-size: var(--gp-text-lg);
+  border: 1px solid transparent;
+  border-radius: var(--gp-radius-md);
   font-variant-numeric: tabular-nums;
 
+  strong {
+    font-size: var(--gp-text-xl);
+    font-weight: 700;
+  }
+
+  i {
+    font-size: 0.8125rem;
+  }
+
+  &.vacia {
+    border-color: var(--gp-line);
+  }
+
   &.critica {
-    border: 2px solid var(--gp-danger);
+    box-shadow: inset 0 0 0 2px var(--gp-danger);
+
+    i {
+      color: var(--gp-danger);
+    }
+  }
+
+  &.critica.oscura {
+    box-shadow:
+      inset 0 0 0 2px var(--gp-danger),
+      inset 0 0 0 3px var(--gp-surface);
+
+    i {
+      color: inherit;
+    }
   }
 
   &:focus-visible {
@@ -66,15 +195,43 @@
     box-shadow: var(--gp-focus);
   }
 
-  i {
-    font-size: 0.8rem;
+  &.critica:focus-visible {
+    box-shadow:
+      inset 0 0 0 2px var(--gp-danger),
+      var(--gp-focus);
   }
+
+  // Cascada diagonal en la primera carga: 5 diagonales × 40 ms + 240 ms = 400 ms en total
+  &.gp-anim-celda {
+    animation-duration: 240ms;
+  }
+}
+
+.leyenda-plazos {
+  margin-bottom: var(--gp-space-4);
+
+  i {
+    font-size: 0.8125rem;
+  }
+
+  .l-ok .gp-muestra { background: var(--gp-ok); }
+  .l-ok i { color: var(--gp-ok); }
+  .l-warn .gp-muestra { background: var(--gp-warn); }
+  .l-warn i { color: var(--gp-warn); }
+  .l-danger .gp-muestra { background: var(--gp-danger); }
+  .l-danger i { color: var(--gp-danger); }
+  .l-curso .gp-muestra { background: var(--gp-rampa-3); }
+  .l-curso i { color: var(--gp-accent); }
 }
 
 .apiladas {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+.cab {
+  margin: 0;
 }
 
 .enlace {
@@ -86,4 +243,42 @@
     color: var(--gp-accent);
     text-decoration: underline;
   }
+}
+
+.estado-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gp-space-3);
+  padding: var(--gp-space-4) var(--gp-space-5);
+}
+
+// Esqueleto de carga
+.esqueleto {
+  p-skeleton {
+    display: block;
+  }
+
+  .gp-cifra,
+  .gp-seccion {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gp-space-3);
+  }
+}
+
+.esq-filtros {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 0.8fr 0.8fr;
+  gap: var(--gp-space-3);
+  margin-bottom: var(--gp-space-5);
+}
+
+.esq-matriz {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  max-width: 360px;
+  margin: 0 auto;
 }
