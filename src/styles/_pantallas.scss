@@ -58,6 +58,13 @@
       display: none;
     }
   }
+
+  // A 1024 los tres selectores no caben en una fila: el proyecto va solo y los otros se reparten la siguiente
+  @media (max-width: 1100px) {
+    > .gp-campo.gp-proyecto {
+      flex-basis: 100%;
+    }
+  }
 }
 
 .gp-campo {
@@ -227,6 +234,14 @@
     color: var(--gp-text-muted);
     font-size: var(--gp-text-sm);
   }
+
+  // Enlace de la sección («Ver hitos», «Ver carga semanal»): tamaño de enlace y alineado con el texto
+  // por un margen negativo igual a su relleno, también cuando pasa a la línea de abajo
+  .p-button-text {
+    margin-inline: -0.625rem;
+    padding: 0.375rem 0.625rem;
+    font-size: var(--gp-text-sm);
+  }
 }
 
 .gp-rejilla {
@@ -237,6 +252,12 @@
 }
 
 // Tablas PrimeNG con el tono de la app
+// El contenedor con scroll es el bloque contenedor de los textos .sr-only de las celdas: si no, quedan
+// fuera del scroll de la tabla y ensanchan la página en pantallas angostas.
+.p-datatable-table-container {
+  position: relative;
+}
+
 .gp-tabla {
   .p-datatable-table-container {
     overflow-x: auto;
@@ -391,6 +412,11 @@ td.gp-vacio {
     transition: none;
     transform-origin: left center;
     animation: gp-desplegar-x var(--gp-dur-dibujo) var(--gp-ease-out) backwards;
+  }
+
+  // Después del primer dibujo ([gpDibujoUnico]) las filas que se vuelven a crear no repiten la animación
+  .gp-quieto & .p-progressbar-value {
+    animation: none;
   }
 
   span {

@@ -18,6 +18,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
+import { DibujoUnico } from '../../../../shared/ui/movimiento/dibujo-unico';
 import { ClpPipe } from '../../../../shared/pipes/clp.pipe';
 import { proyectoPreferido, recordarProyecto } from '../../../../shared/util/contexto-proyecto';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -57,6 +58,7 @@ import { CalendarioLaboral } from '../../ui/calendario-laboral/calendario-labora
     TooltipModule,
     PageHeader,
     Resaltar,
+    DibujoUnico,
     ClpPipe,
     DetalleActividad,
     CalendarioLaboral,

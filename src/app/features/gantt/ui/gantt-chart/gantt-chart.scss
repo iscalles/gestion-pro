@@ -616,12 +616,10 @@
   color: var(--gp-ok);
 }
 
+// A 1024 la grilla se angosta (nombres más cortos) pero conserva todas sus columnas, como antes
 @media (max-width: 1100px) {
   :host {
-    --ancho-grilla: 340px;
-  }
-  .c-avance {
-    display: none;
+    --ancho-grilla: 380px;
   }
 }
 
@@ -630,6 +628,7 @@
     --ancho-grilla: 220px;
   }
   .c-fecha,
+  .c-avance,
   .c-estado {
     display: none;
   }

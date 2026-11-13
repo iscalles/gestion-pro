@@ -90,6 +90,7 @@ $separacion: 2px;
 }
 
 .mapa {
+  position: relative; // los textos .sr-only quedan dentro del scroll y no ensanchan la página
   overflow-x: auto;
   border-top: 1px solid var(--gp-line);
   border-bottom: 1px solid var(--gp-line);

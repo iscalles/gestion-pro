@@ -88,7 +88,7 @@
       }
     }
 
-    <section class="panel" [attr.aria-busy]="cargando()">
+    <section class="panel" [attr.aria-busy]="cargando()" [gpDibujoUnico]="!cargando() && hitos().length > 0">
       @if (error(); as e) {
         <div class="gp-estado-carga" role="alert">
           <p-message severity="error" [text]="e" />

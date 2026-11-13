@@ -18,6 +18,15 @@
   .pesos {
     margin-right: 1px;
   }
+
+  // SPI · CPI en una sola línea: su celda parte un poco más ancha que las de montos
+  .gp-cifra:has(> .indices) {
+    flex-basis: 200px;
+  }
+
+  .indices {
+    white-space: nowrap;
+  }
 }
 
 // Pestañas: la línea base cruza el panel y el indicador (que ya se desliza) va sobre ella

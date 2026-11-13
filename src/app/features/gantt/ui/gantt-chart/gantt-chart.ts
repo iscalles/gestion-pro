@@ -249,6 +249,18 @@ export class GanttChart {
     return { superior, inferior };
   });
 
+  /**
+   * Visual: la etiqueta «Hoy» va en la fila de meses, sobre la línea de hoy. Si cae encima del nombre
+   * del mes, ese nombre (sin cambiar su texto) se corre a la derecha de la etiqueta.
+   */
+  protected readonly corrimientoMes = computed(() => {
+    const x = this.xHoy();
+    const c = this.escala().superior.find((s) => x >= s.x && x < s.x + s.ancho);
+    if (!c) return null;
+    const finTexto = c.x + 8 + c.texto.length * 7.4;
+    return x - 20 < finTexto ? { x: c.x, pad: x + 26 - c.x } : null;
+  });
+
   private readonly feriados = computed(() => new Set(this.noLaborables().map(diaDe)));
   private readonly laborables = computed(() => new Set(this.diasLaborables().map((d) => DOW[d])));
 

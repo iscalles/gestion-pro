@@ -17,12 +17,6 @@
   --gp-night-text: #a7c4c2; // 8.92:1 sobre la noche
   --gp-turquesa-luz: #5fd3c7; // 9.17:1 sobre la noche
 
-  // Menú oscuro anterior: se mantiene hasta rediseñar el shell
-  --gp-sidebar: #0c3133;
-  --gp-text-on-dark: #ffffff;
-  --gp-text-on-dark-muted: #a9c8c9;
-  --gp-text-on-dark-active: #c1fafd;
-
   // Tinta
   --gp-text: #0f2a2b; // 15.15:1
   --gp-text-muted: #4a5f60; // 6.78:1 (5.93:1 sobre el riel)
@@ -89,7 +83,6 @@
   --gp-radius-sm: 4px; // chips e insignias
   --gp-radius-md: 6px; // controles y botones
   --gp-radius-lg: 10px; // paneles y diálogos
-  --gp-shadow-soft: none;
   --gp-shadow-overlay: 0 16px 40px -12px rgba(15, 42, 43, 0.22), 0 2px 6px rgba(15, 42, 43, 0.06);
   --gp-focus: 0 0 0 2px var(--gp-surface), 0 0 0 4px var(--gp-accent);
 

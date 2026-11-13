@@ -16,11 +16,13 @@
       </div>
       <div class="escala" [style.width.px]="ancho()" aria-hidden="true">
         <div class="nivel">
+          @let corr = corrimientoMes();
           @for (c of escala().superior; track c.x) {
             <span class="celda superior" [style.left.px]="c.x" [style.width.px]="c.ancho"
-              ><span>{{ c.texto }}</span></span
+              ><span [style.padding-left.px]="corr?.x === c.x ? corr!.pad : null">{{ c.texto }}</span></span
             >
           }
+          <span class="etiqueta-hoy" [style.left.px]="xHoy()">Hoy</span>
         </div>
         <div class="nivel">
           @for (c of escala().inferior; track c.x) {
@@ -32,7 +34,6 @@
               >{{ c.texto }}</span
             >
           }
-          <span class="etiqueta-hoy" [style.left.px]="xHoy()">Hoy</span>
         </div>
       </div>
     </div>

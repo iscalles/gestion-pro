@@ -22,6 +22,7 @@ import { StatusBadge } from '../../../../shared/ui/status-badge/status-badge';
 import { SEMAFORO, Semaforo, SemaforoBadge } from '../../../../shared/ui/semaforo/semaforo';
 import { Evidencias } from '../../../../shared/ui/evidencias/evidencias';
 import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
+import { DibujoUnico } from '../../../../shared/ui/movimiento/dibujo-unico';
 import { contextoProyecto } from '../../../../shared/util/contexto-proyecto';
 import { fmtValorKpi, hoyIso } from '../../../../shared/util/formato';
 import { erroresDeCampos, mensajeDeError } from '../../../../core/api/api-error';
@@ -51,7 +52,7 @@ interface FormHito {
   imports: [
     DatePipe, FormsModule, TableModule, ButtonModule, CheckboxModule, DialogModule, InputTextModule, MessageModule,
     MultiSelectModule, ProgressBarModule, SelectModule, SkeletonModule, ToastModule, ConfirmDialogModule, TooltipModule,
-    PageHeader, SelectorProyecto, StatusBadge, SemaforoBadge, Evidencias, Resaltar,
+    PageHeader, SelectorProyecto, StatusBadge, SemaforoBadge, Evidencias, Resaltar, DibujoUnico,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './hitos-lista.html',

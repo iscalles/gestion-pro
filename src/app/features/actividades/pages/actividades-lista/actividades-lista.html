@@ -1,7 +1,7 @@
 <p-toast position="bottom-right" />
 <p-confirmdialog [style]="{ width: 'min(440px, calc(100vw - 32px))' }" />
 
-<div class="gp-pagina pagina">
+<div class="gp-pagina pagina" [gpDibujoUnico]="plan() !== null">
   <gp-page-header
     titulo="Actividades y dependencias"
     descripcion="Etapas, actividades y subactividades del proyecto, con fechas, avance y precedencias."

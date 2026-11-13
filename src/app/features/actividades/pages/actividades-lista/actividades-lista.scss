@@ -108,6 +108,7 @@
 }
 
 .tabla-contenedor {
+  position: relative; // los textos .sr-only quedan dentro del scroll y no ensanchan la página
   overflow-x: auto;
 }
 
@@ -206,6 +207,15 @@
   .col-resp {
     display: none;
   }
+}
+// A 1024 o junto al panel abierto: el avance se angosta para que los nombres no se partan en tres líneas
+@container (max-width: 760px) {
+  .col-avance {
+    width: 104px;
+  }
+}
+th.col-nombre {
+  min-width: 200px;
 }
 @container (max-width: 600px) {
   .col-avance {
