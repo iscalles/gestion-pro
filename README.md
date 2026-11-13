@@ -11,27 +11,69 @@ Frontend del proyecto integrador de Gestión de Proyectos de Software (Duoc UC):
 
 > Se usa PrimeNG 21 porque desde la versión 22 PrimeNG cambió a la licencia PrimeUI y muestra un aviso de licencia inválida sin clave.
 
-## Levantar en local
+## Levantar la app completa
 
-Requiere Node 22 y npm 11 (npm 10 falla al resolver dependencias desde cero; con el `package-lock.json` `npm ci` funciona en ambos).
+La app son dos repositorios: este (frontend) y [iscalles/gestion-pro-backend](https://github.com/iscalles/gestion-pro-backend) (API). La base de datos Oracle corre en Docker y la levanta el backend.
+
+### Requisitos
+
+- [Git](https://git-scm.com/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), abierto antes de empezar
+- Java 21 (JDK)
+- Node 22.12 o más reciente, con npm 11 (con npm 10 usa siempre `npm ci`, no `npm install`)
+
+La primera vez se necesita internet para descargar la imagen de Oracle y las dependencias de Maven y npm. Después funciona sin conexión: la fuente tipográfica se instala con npm y se sirve desde la propia app.
+
+### 1. Clonar los dos repositorios
 
 ```bash
+git clone https://github.com/iscalles/gestion-pro-backend.git
+git clone https://github.com/iscalles/gestion-pro.git
+```
+
+### 2. Base de datos y backend (primera terminal)
+
+```bash
+cd gestion-pro-backend
+docker compose up -d
+./mvnw spring-boot:run
+```
+
+- En Windows con PowerShell, el segundo comando es `.\mvnw spring-boot:run`.
+- La primera vez Oracle tarda 1 a 2 minutos en quedar listo. Si el backend parte antes y no logra conectarse, espera a que `docker ps` muestre `gestion-pro-oracle` como `(healthy)` y vuelve a ejecutar `./mvnw spring-boot:run`.
+- La primera vez el backend crea las tablas y carga el caso de prueba. Está listo cuando el log muestra `Started GestionProBackendApplication`. La API queda en http://localhost:8080 (Swagger en http://localhost:8080/swagger-ui.html).
+
+### 3. Frontend (segunda terminal)
+
+```bash
+cd gestion-pro
 npm ci
-npm start          # http://localhost:4200
+npm start
 ```
 
-Necesita el backend corriendo en `http://localhost:8080`: `docker compose up -d` y `./mvnw spring-boot:run` en el repositorio del backend. La URL se cambia en `src/environments/environment.ts`.
+Abre http://localhost:4200 e inicia sesión con una de las cuentas de demostración (contraseña `demo1234`):
 
-Si el puerto 8080 está ocupado (por ejemplo, por NVIDIA Broadcast), levanta el backend en el 8081 y usa la configuración `puerto-8081`, que apunta a `src/environments/environment.8081.ts`:
+| Correo | Rol |
+|---|---|
+| `admin@gestionpro.cl` | Administrador: ve y modifica todo |
+| `usuario@gestionpro.cl` | Usuario de proyecto (miembro de PRY-2026-01) |
 
-```bash
-npx ng serve --configuration puerto-8081
-```
+### Detener y volver a levantar sin perder datos
 
-Cuentas de demostración (las crea el backend), contraseña `demo1234`:
+- `Ctrl+C` en cada terminal detiene el frontend y el backend.
+- `docker compose stop` (en el repositorio del backend) detiene Oracle. Para volver a usar la app: `docker compose start`, `./mvnw spring-boot:run` y `npm start`.
+- Los datos quedan guardados en el volumen de Docker `oracle-data`: reiniciar el backend, Docker o el equipo no los borra, y el backend no vuelve a cargar el caso de prueba si ya existe.
+- Solo se borran con `docker compose down -v` o con el script de reinicio del backend, que devuelven todo al caso de prueba original (ver [su README](https://github.com/iscalles/gestion-pro-backend#volver-al-caso-de-prueba-original)).
 
-- `admin@gestionpro.cl`: administrador
-- `usuario@gestionpro.cl`: usuario de proyecto (miembro de PRY-2026-01)
+### Si algo falla
+
+| Síntoma | Qué hacer |
+|---|---|
+| El backend no conecta con la base de datos | Oracle aún está iniciando: espera a que `docker ps` lo muestre `(healthy)` y vuelve a iniciar el backend. |
+| `Port 8080 was already in use` | Otro programa usa el 8080 (por ejemplo, NVIDIA Broadcast). Ciérralo, o levanta el backend con `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081` y el frontend con `npx ng serve --configuration puerto-8081`. |
+| El puerto 1521 está ocupado | Otro programa (por ejemplo, otra base Oracle) usa el 1521: detenlo antes de `docker compose up -d`. |
+| `npm install` falla al resolver dependencias | Usa `npm ci` (respeta el `package-lock.json`) o actualiza npm con `npm install -g npm@11`. |
+| El login no responde o no carga datos | Revisa que el backend esté corriendo en http://localhost:8080. La URL del backend está en `src/environments/environment.ts`. |
 
 ## Estructura
 
@@ -40,6 +82,7 @@ src/
 ├─ environments/             URL del backend (8080 por defecto, 8081 con la configuración puerto-8081)
 ├─ styles/_tokens.scss       colores, tipografía, espaciado (fuente única de verdad)
 ├─ styles/_pantallas.scss    piezas comunes de las pantallas (cifras, secciones, leyendas, tablas de datos)
+├─ styles/_movimiento.scss   animaciones (curvas, duraciones, movimiento reducido)
 └─ app/
    ├─ theme/                 preset de PrimeNG con la paleta del proyecto
    ├─ core/
@@ -48,7 +91,7 @@ src/
    │  └─ layout/             shell con menú lateral y navegación
    ├─ shared/
    │  ├─ graficos/           barras agrupadas, barra apilada, líneas, sparkline y paleta validada
-   │  ├─ ui/                 page-header, selector de proyecto, semáforo, status-badge, evidencias
+   │  ├─ ui/                 page-header, selector de proyecto, semáforo, status-badge, evidencias, movimiento
    │  ├─ pipes/              clp (montos en pesos)
    │  └─ util/               fechas ISO ↔ Date sin corrimiento de zona horaria, formatos, proyecto recordado
    └─ features/              un módulo por requerimiento, con carga diferida
@@ -88,19 +131,25 @@ Todas las pantallas de un proyecto usan `?proyecto=ID` y recuerdan el último pr
 
 Las fechas planificadas, costos, avances, KPI y alertas nunca se calculan en el frontend: los entrega el backend después de cada recálculo, y cada pantalla vuelve a pedirlos al guardar.
 
-## Paleta
+## Paleta y movimiento
+
+Dirección visual «Papel de plano»: fondo claro, líneas finas en vez de cajas, cifras protagonistas y color solo donde significa algo. Todos los colores viven como tokens en `src/styles/_tokens.scss`.
 
 | Token | Color | Uso | Contraste |
 |---|---|---|---|
-| `--gp-sidebar` / `--gp-text` | `#0C3133` | menú lateral, texto principal | 13.97:1 |
-| `--gp-accent` | `#2C6163` | botones, enlaces, foco | 7.01:1 con blanco |
-| `--gp-data` | `#609496` | gráficos, íconos, bordes (no texto) | 3.40:1 |
-| `--gp-line-strong` | `#A9C8C9` | bordes fuertes, texto secundario en menú | 7.85:1 sobre `#0C3133` |
-| `--gp-text-on-dark-active` | `#C1FAFD` | ítem activo del menú | 12.22:1 sobre `#0C3133` |
+| `--gp-text` | `#0F2A2B` | texto principal | 15.15:1 |
+| `--gp-text-muted` | `#4A5F60` | texto secundario | 6.78:1 |
+| `--gp-accent` | `#0B6E6A` | botones, enlaces, selección, foco y línea Hoy | 6.08:1, también con texto blanco |
+| `--gp-data` | `#2E9690` | íconos y marcas de datos (no texto) | 3.57:1 |
+| `--gp-canvas` / `--gp-surface` | `#F5F7F6` / `#FFFFFF` | lienzo de la app / paneles y tablas | |
+| `--gp-rail` | `#EBF1F0` | menú lateral | |
+| `--gp-night` | `#0B2224` | panel del login y tooltips | |
 
 El semáforo de KPI (verde `#1F6B3A`, ámbar `#8A5300`, rojo `#A3231B`) queda fuera de la paleta de marca para que el acento turquesa nunca se confunda con un estado. Cada estado lleva además ícono y texto.
 
 En los gráficos, las series plan y real usan `#009490` y `#8059C9` (par validado para daltonismo), las magnitudes usan una rampa turquesa de un solo tono y cada gráfico de dos o más series tiene leyenda, tooltip y la opción **Ver datos en tabla**.
+
+Las animaciones usan solo `transform` y `opacity` con una curva ease-out fuerte: hasta 200 ms en las interacciones y hasta 500 ms en los momentos expresivos (dibujo de gráficos, aprobación de un cambio). Con «reducir movimiento» activado en el sistema, todo pasa a un desvanecido corto. Están en `src/styles/_movimiento.scss` y `src/app/shared/ui/movimiento/`.
 
 ## Carta Gantt (Módulo 4)
 
