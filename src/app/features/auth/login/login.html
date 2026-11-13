@@ -8,19 +8,29 @@
       </svg>
       Gestión Pro
     </div>
+
+    <!-- Carta Gantt ilustrada: se dibuja una vez, de izquierda a derecha; luego aparecen Hoy y el hito -->
     <div class="cronograma">
       @for (b of barras; track $index) {
-        <span class="fila"><span class="barra" [class]="'barra ' + b[2]" [style.left.%]="b[0]" [style.width.%]="b[1]"></span></span>
+        <span class="fila">
+          <span class="barra" [style.--x]="b[0]" [style.--w]="b[1]" [style.--i]="$index">
+            <span class="hecho"></span>
+          </span>
+        </span>
       }
-      <span class="hito" style="left: 94%"></span>
+      <span class="hoy"></span>
+      <span class="hito"></span>
     </div>
+
     <p class="lema">Planificación, costos, indicadores y cambios del proyecto en un mismo lugar.</p>
   </section>
 
   <section class="acceso">
     <form [formGroup]="form" (ngSubmit)="ingresar()" novalidate>
-      <h1>Iniciar sesión</h1>
-      <p class="ayuda">Usa tu correo institucional. Lo que puedes hacer depende de tu rol.</p>
+      <div class="cabecera">
+        <h1>Iniciar sesión</h1>
+        <p class="ayuda">Usa tu correo institucional. Lo que puedes hacer depende de tu rol.</p>
+      </div>
 
       @if (sesionExpirada && !error()) {
         <p-message severity="warn">Tu sesión expiró. Vuelve a ingresar para continuar.</p-message>
@@ -67,11 +77,11 @@
       <div class="demo">
         <p>Cuentas de demostración (contraseña demo1234)</p>
         <button type="button" (click)="usarCuenta('admin@gestionpro.cl')">
-          <span><strong>Carla Muñoz</strong> admin&#64;gestionpro.cl</span>
+          <span class="cuenta"><strong>Carla Muñoz</strong> admin&#64;gestionpro.cl</span>
           <span class="rol">Administrador</span>
         </button>
         <button type="button" (click)="usarCuenta('usuario@gestionpro.cl')">
-          <span><strong>Tomás Vidal</strong> usuario&#64;gestionpro.cl</span>
+          <span class="cuenta"><strong>Tomás Vidal</strong> usuario&#64;gestionpro.cl</span>
           <span class="rol">Usuario de proyecto</span>
         </button>
       </div>

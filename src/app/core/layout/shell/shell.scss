@@ -1,9 +1,11 @@
+// Riel lateral claro: capa teñida con una línea fina a la derecha. El color solo marca la selección.
+
 .shell {
   display: flex;
   min-height: 100vh;
 }
 
-.sidebar {
+.riel {
   flex: none;
   width: 248px;
   position: sticky;
@@ -11,36 +13,40 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--gp-sidebar);
-  color: var(--gp-text-on-dark);
+  background: var(--gp-rail);
+  border-right: 1px solid var(--gp-line);
+  color: var(--gp-text);
 }
 
 .marca {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--gp-space-5) var(--gp-space-4) var(--gp-space-4);
+  gap: var(--gp-space-2);
+  padding: var(--gp-space-5) var(--gp-space-4) var(--gp-space-4) var(--gp-space-5);
 }
 
 .marca-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--gp-space-3);
-  color: var(--gp-text-on-dark);
+  gap: 10px;
+  border-radius: var(--gp-radius-sm);
+  color: var(--gp-text);
   text-decoration: none;
   font-size: var(--gp-text-lg);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 
   &:hover {
-    color: var(--gp-text-on-dark);
+    color: var(--gp-text);
   }
 }
 
 .marca-icono {
-  width: 26px;
-  height: 26px;
-  fill: var(--gp-text-on-dark-active);
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: var(--gp-accent);
 }
 
 .menu-toggle {
@@ -50,91 +56,126 @@
   border: 0;
   border-radius: var(--gp-radius-md);
   background: transparent;
-  color: var(--gp-text-on-dark);
+  color: var(--gp-text);
   font-size: 1.1rem;
   cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--gp-surface) 70%, transparent);
+  }
 }
 
+// Navegación: el indicador es un solo elemento que se desliza al ítem activo (ver shell.ts)
 nav {
+  position: relative;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 0 var(--gp-space-3);
+  padding: var(--gp-space-1) var(--gp-space-2) var(--gp-space-4);
+  scrollbar-width: thin;
+}
+
+.indicador {
+  position: absolute;
+  top: 0;
+  left: calc(var(--gp-space-2) + 5px);
+  z-index: 1;
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--gp-accent);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--gp-dur-base) var(--gp-ease-out);
 }
 
 .grupo + .grupo {
-  margin-top: var(--gp-space-4);
+  margin-top: var(--gp-space-5);
 }
 
 .grupo-titulo {
   margin: 0 0 var(--gp-space-1);
-  padding: 0 var(--gp-space-3);
+  padding: 0 14px;
   font-size: var(--gp-text-xs);
   font-weight: 500;
-  color: var(--gp-text-on-dark-muted);
+  line-height: 1.5;
+  color: var(--gp-text-muted);
 }
 
 ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
+// Hover instantáneo (uso continuo): sin transición
 nav a {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--gp-space-3);
-  min-height: 40px;
-  padding: 0 var(--gp-space-3);
-  border-radius: var(--gp-radius-sm);
-  color: #e3eeee;
+  gap: 10px;
+  min-height: 38px;
+  padding: 6px 10px 6px 14px;
+  border-radius: var(--gp-radius-md);
+  color: var(--gp-text);
   text-decoration: none;
   font-size: var(--gp-text-md);
+  font-weight: 500;
+  line-height: 1.35;
 
   i {
-    font-size: 0.95rem;
-    color: var(--gp-text-on-dark-muted);
+    flex: none;
+    width: 16px;
+    font-size: 0.9375rem;
+    text-align: center;
+    color: var(--gp-text-muted);
   }
 
   &:hover {
-    background: rgba(193, 250, 253, 0.08);
-    color: var(--gp-text-on-dark);
+    background: color-mix(in srgb, var(--gp-surface) 70%, transparent);
+    color: var(--gp-text);
   }
 
-  // Ítem activo: barra lateral clara + texto turquesa claro (12.22:1)
   &.activo {
-    background: rgba(193, 250, 253, 0.12);
-    color: var(--gp-text-on-dark-active);
+    background: var(--gp-accent-soft);
+    color: var(--gp-accent-hover);
     font-weight: 700;
-    box-shadow: inset 3px 0 0 var(--gp-text-on-dark-active);
 
     i {
-      color: var(--gp-text-on-dark-active);
+      color: var(--gp-accent);
     }
   }
 
   &:focus-visible {
-    box-shadow: 0 0 0 2px var(--gp-text-on-dark-active);
+    z-index: 2;
   }
 }
 
+// Pie: quién usa la app y la salida
 .usuario {
   display: flex;
   align-items: center;
   gap: var(--gp-space-3);
-  padding: var(--gp-space-4);
-  border-top: 1px solid rgba(193, 250, 253, 0.12);
+  padding: var(--gp-space-3) var(--gp-space-3) var(--gp-space-3) 14px;
+  border-top: 1px solid var(--gp-line);
 }
 
 .avatar {
   flex: none;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--gp-line-strong);
   border-radius: 50%;
-  background: #2c6163;
-  font-size: var(--gp-text-sm);
+  background: var(--gp-surface);
+  color: var(--gp-accent-hover);
+  font-size: var(--gp-text-xs);
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .usuario-datos {
@@ -146,52 +187,66 @@ nav a {
 }
 
 .usuario-nombre {
-  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--gp-text-sm);
+  font-weight: 500;
 }
 
 .usuario-rol {
   font-size: var(--gp-text-xs);
-  color: var(--gp-text-on-dark-muted);
+  color: var(--gp-text-muted);
 }
 
 .salir {
-  width: 40px;
-  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
   border: 0;
-  border-radius: var(--gp-radius-sm);
+  border-radius: var(--gp-radius-md);
   background: transparent;
-  color: var(--gp-text-on-dark-muted);
+  color: var(--gp-text-muted);
+  font-size: 0.9375rem;
   cursor: pointer;
 
   &:hover {
-    background: rgba(193, 250, 253, 0.08);
-    color: var(--gp-text-on-dark);
+    background: color-mix(in srgb, var(--gp-surface) 70%, transparent);
+    color: var(--gp-text);
   }
 }
 
+// El contenido se encoge con la ventana: las tablas anchas se desplazan dentro de su panel
 .contenido {
   flex: 1;
   min-width: 0;
 }
 
-// Teléfono y tablet: el menú lateral pasa a barra superior desplegable
+@media (prefers-reduced-motion: reduce) {
+  .indicador {
+    transition: none;
+  }
+}
+
+// Teléfono y tablet: el riel pasa a barra superior con menú desplegable
 @media (max-width: 960px) {
   .shell {
     flex-direction: column;
   }
 
-  .sidebar {
+  .riel {
     width: 100%;
     height: auto;
     position: sticky;
     z-index: 10;
+    border-right: 0;
+    border-bottom: 1px solid var(--gp-line);
   }
 
   .marca {
-    padding: var(--gp-space-2) var(--gp-space-4);
+    padding: var(--gp-space-2) var(--gp-space-2) var(--gp-space-2) var(--gp-space-4);
   }
 
   .menu-toggle {
@@ -204,7 +259,7 @@ nav a {
     display: none;
   }
 
-  .sidebar.abierto {
+  .riel.abierto {
     nav,
     .usuario {
       display: flex;

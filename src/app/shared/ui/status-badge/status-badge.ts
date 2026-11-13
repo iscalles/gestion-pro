@@ -21,19 +21,25 @@ const ICONO: Record<Tono, string> = {
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 2px 8px;
+      gap: 5px;
+      max-width: 100%;
+      padding: 2px 8px 2px 6px;
       border-radius: var(--gp-radius-sm);
       font-size: var(--gp-text-xs);
       font-weight: 500;
+      line-height: 1.5;
       white-space: nowrap;
+      font-variant-numeric: tabular-nums;
     }
-    i { font-size: 0.75rem; }
+    i {
+      flex: none;
+      font-size: 0.75rem;
+    }
     .t-ok { background: var(--gp-ok-soft); color: var(--gp-ok); }
     .t-warn { background: var(--gp-warn-soft); color: var(--gp-warn); }
     .t-danger { background: var(--gp-danger-soft); color: var(--gp-danger); }
     .t-neutral { background: var(--gp-neutral-soft); color: var(--gp-text-muted); }
-    .t-accent { background: var(--gp-accent-soft); color: var(--gp-accent); }
+    .t-accent { background: var(--gp-accent-soft); color: var(--gp-accent-hover); }
   `,
 })
 export class StatusBadge {

@@ -1,7 +1,7 @@
 <p-toast position="bottom-right" />
 <p-confirmdialog [style]="{ width: 'min(460px, calc(100vw - 32px))' }" />
 
-<div class="pagina">
+<div class="gp-pagina">
   <gp-page-header
     titulo="Proyectos"
     descripcion="Crea, edita y cierra proyectos. El avance y los costos se calculan desde las actividades y sus recursos."
@@ -11,24 +11,51 @@
     }
   </gp-page-header>
 
-  <dl class="resumen">
-    <div>
-      <dt>En ejecución</dt>
-      <dd>{{ resumen().activos }} <span>de {{ resumen().total }}</span></dd>
-    </div>
-    <div>
-      <dt>Presupuesto en ejecución</dt>
-      <dd class="num">{{ resumen().presupuesto | clp }}</dd>
-    </div>
-    <div>
-      <dt>Costo planificado en ejecución</dt>
-      <dd class="num">{{ resumen().costoPlan | clp }}</dd>
-    </div>
-    <div>
-      <dt>Solicitudes de cambio abiertas</dt>
-      <dd>{{ resumen().solicitudes }}</dd>
-    </div>
-  </dl>
+  <!-- Cifras clave: una regleta con divisores finos; cuentan desde cero la primera vez que hay datos -->
+  @if (!error()) {
+    <dl class="gp-cifras resumen" [attr.aria-busy]="cargando()">
+      <div class="gp-cifra">
+        <dt>En ejecución</dt>
+        <dd>
+          @if (cargando()) {
+            <p-skeleton width="4.5rem" height="1.75rem" />
+          } @else {
+            <span gpContar>{{ resumen().activos }}</span><span class="gp-unidad"> de {{ resumen().total }}</span>
+          }
+        </dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Presupuesto en ejecución</dt>
+        <dd>
+          @if (cargando()) {
+            <p-skeleton width="9rem" height="1.75rem" />
+          } @else {
+            <span gpContar>{{ resumen().presupuesto | clp }}</span>
+          }
+        </dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Costo planificado en ejecución</dt>
+        <dd>
+          @if (cargando()) {
+            <p-skeleton width="9rem" height="1.75rem" />
+          } @else {
+            <span gpContar>{{ resumen().costoPlan | clp }}</span>
+          }
+        </dd>
+      </div>
+      <div class="gp-cifra">
+        <dt>Solicitudes de cambio abiertas</dt>
+        <dd>
+          @if (cargando()) {
+            <p-skeleton width="3rem" height="1.75rem" />
+          } @else {
+            <span gpContar>{{ resumen().solicitudes }}</span>
+          }
+        </dd>
+      </div>
+    </dl>
+  }
 
   <section class="panel">
     <div class="filtros">
@@ -56,41 +83,57 @@
           [ngModel]="estado()"
           (ngModelChange)="estado.set($event)"
           styleClass="select-estado"
+          appendTo="body"
         />
       </div>
     </div>
 
     @if (error(); as msg) {
-      <div class="estado-carga">
+      <div class="gp-estado-carga estado-error">
         <p-message severity="error">{{ msg }}</p-message>
         <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar()" />
       </div>
     } @else if (cargando()) {
-      <div class="estado-carga" aria-busy="true" aria-label="Cargando proyectos">
-        @for (i of [1, 2, 3, 4]; track i) {
-          <p-skeleton height="1.75rem" />
+      <!-- Esqueleto con la forma de la tabla: código, proyecto, fechas, montos, estado y avance -->
+      <div class="esqueleto" aria-busy="true" aria-label="Cargando proyectos">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <div class="esqueleto-fila">
+            <p-skeleton width="5.5rem" height="0.875rem" />
+            <p-skeleton height="0.875rem" />
+            <p-skeleton width="6rem" height="0.875rem" />
+            <p-skeleton width="6rem" height="0.875rem" />
+            <p-skeleton width="6rem" height="0.875rem" />
+            <p-skeleton width="6.5rem" height="1.25rem" />
+            <p-skeleton width="4.5rem" height="0.875rem" />
+          </div>
         }
       </div>
     } @else {
-      <p-table [value]="filtrados()" [tableStyle]="{ 'min-width': '1080px' }" dataKey="id">
+      <p-table
+        class="gp-tabla tabla"
+        [class.dibujar]="primeraCarga()"
+        [value]="filtrados()"
+        [tableStyle]="{ 'min-width': '1000px' }"
+        dataKey="id"
+      >
         <ng-template #header>
           <tr>
             <th>Código</th>
             <th>Proyecto</th>
             <th>Responsable</th>
             <th>Plan</th>
-            <th>Término previsto</th>
+            <th class="partir">Término previsto</th>
             <th class="num">Presupuesto</th>
-            <th class="num">Costo plan / real</th>
+            <th class="num partir">Costo <span class="junto">plan / real</span></th>
             <th>Estado</th>
-            <th class="col-avance">Avance</th>
+            <th class="num col-avance">Avance</th>
             <th><span class="sr-only">Acciones</span></th>
           </tr>
         </ng-template>
-        <ng-template #body let-p>
-          <tr>
+        <ng-template #body let-p let-i="rowIndex">
+          <tr [style.--fila]="i">
             <td class="codigo">{{ p.codigo }}</td>
-            <td>
+            <td class="proyecto">
               <a class="nombre" routerLink="/actividades" [queryParams]="{ proyecto: p.id }" (click)="recordar(p)">{{ p.nombre }}</a>
               @if (p.solicitudesAbiertas > 0) {
                 <a class="sub" routerLink="/cambios" [queryParams]="{ proyecto: p.id }" (click)="recordar(p)">
@@ -99,12 +142,15 @@
               }
             </td>
             <td>{{ p.responsable }}</td>
-            <td class="fecha">{{ p.fechaInicio | date: 'dd-MM-yyyy' }} → {{ p.fechaTermino | date: 'dd-MM-yyyy' }}</td>
+            <td class="fecha">
+              <span class="linea">{{ p.fechaInicio | date: 'dd-MM-yyyy' }}</span>
+              <span class="linea">→ {{ p.fechaTermino | date: 'dd-MM-yyyy' }}</span>
+            </td>
             <td class="fecha">
               @if (p.estado === 'TERMINADO' && p.fechaTerminoReal) {
-                Real {{ p.fechaTerminoReal | date: 'dd-MM-yyyy' }}
+                <span class="rotulo">Real</span> {{ p.fechaTerminoReal | date: 'dd-MM-yyyy' }}
               } @else if (p.terminoPrevisto) {
-                <span [class.tarde]="atrasado(p)">
+                <span class="previsto" [class.tarde]="atrasado(p)">
                   @if (atrasado(p)) {
                     <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
                   }
@@ -114,54 +160,60 @@
                   <span class="sr-only">(después del término comprometido)</span>
                 }
               } @else {
-                —
+                <span class="gp-tenue">—</span>
               }
             </td>
             <td class="num">{{ p.presupuesto | clp }}</td>
             <td class="num">
-              {{ p.costoPlan | clp }}<br />
-              <span class="sub-num">{{ p.costoReal | clp }}</span>
+              <span class="linea">{{ p.costoPlan | clp }}</span>
+              <span class="linea sub-num">{{ p.costoReal | clp }}</span>
             </td>
             <td><gp-status-badge [tono]="est(p.estado).tono">{{ est(p.estado).etiqueta }}</gp-status-badge></td>
-            <td>
+            <td class="num">
               <div class="avance">
+                <span class="valor">{{ p.avance | number: '1.0-1' }}<span class="unidad">%</span></span>
                 <p-progressbar [value]="p.avance" [showValue]="false" [attr.aria-label]="'Avance ' + p.avance + '%'" />
-                <span class="num">{{ p.avance | number: '1.0-1' }}%</span>
               </div>
             </td>
             <td class="acciones">
-              <p-button
-                icon="pi pi-th-large"
-                [text]="true"
-                size="small"
-                routerLink="/tableros/proyecto"
-                [queryParams]="{ proyecto: p.id }"
-                (onClick)="recordar(p)"
-                pTooltip="Tablero del proyecto"
-                [ariaLabel]="'Tablero de ' + p.nombre"
-              />
-              @if (esAdmin()) {
-                <p-menu #menu [model]="menuDe(p)" [popup]="true" appendTo="body" />
+              <div class="gp-acciones-fila">
                 <p-button
-                  icon="pi pi-ellipsis-v"
+                  icon="pi pi-th-large"
                   [text]="true"
                   size="small"
-                  (onClick)="menu.toggle($event)"
-                  [ariaLabel]="'Acciones de ' + p.nombre"
+                  routerLink="/tableros/proyecto"
+                  [queryParams]="{ proyecto: p.id }"
+                  (onClick)="recordar(p)"
+                  pTooltip="Tablero del proyecto"
+                  [ariaLabel]="'Tablero de ' + p.nombre"
                 />
-              }
+                @if (esAdmin()) {
+                  <p-menu #menu [model]="menuDe(p)" [popup]="true" appendTo="body" />
+                  <p-button
+                    icon="pi pi-ellipsis-v"
+                    [text]="true"
+                    size="small"
+                    (onClick)="menu.toggle($event)"
+                    [ariaLabel]="'Acciones de ' + p.nombre"
+                  />
+                }
+              </div>
             </td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="10" class="vacio">
-              @if (hayProyectos()) {
-                Ningún proyecto coincide con la búsqueda.
-                <p-button label="Limpiar filtros" [text]="true" (onClick)="limpiarFiltros()" />
-              } @else {
-                Todavía no tienes proyectos asignados.
-              }
+            <td colspan="10" class="celda-vacia">
+              <div class="gp-vacio">
+                @if (hayProyectos()) {
+                  <i class="pi pi-search" aria-hidden="true"></i>
+                  <p>Ningún proyecto coincide con la búsqueda.</p>
+                  <p-button label="Limpiar filtros" [text]="true" (onClick)="limpiarFiltros()" />
+                } @else {
+                  <i class="pi pi-folder-open" aria-hidden="true"></i>
+                  <p>Todavía no tienes proyectos asignados.</p>
+                }
+              </div>
             </td>
           </tr>
         </ng-template>
@@ -177,6 +229,7 @@
   [modal]="true"
   [style]="{ width: 'min(720px, calc(100vw - 32px))' }"
   [draggable]="false"
+  styleClass="dialogo-proyecto"
 >
   <form class="gp-form" (ngSubmit)="guardar()" id="form-proyecto">
     <div class="gp-campo">
@@ -198,6 +251,9 @@
       <label for="p-desc">Descripción</label>
       <textarea pTextarea id="p-desc" name="descripcion" [(ngModel)]="form.descripcion" rows="3" maxlength="2000"></textarea>
     </div>
+
+    <hr class="gp-completo separador" />
+
     <div class="gp-campo">
       <label for="p-ini">Inicio planificado</label>
       <input pInputText type="date" id="p-ini" name="fechaInicio" [(ngModel)]="form.fechaInicio" required />
@@ -217,6 +273,9 @@
       <label for="p-cal">Calendario laboral</label>
       <p-select inputId="p-cal" name="calendarioId" [options]="calendarios()" optionLabel="nombre" optionValue="id" [(ngModel)]="form.calendarioId" appendTo="body" />
     </div>
+
+    <hr class="gp-completo separador" />
+
     @if (editando() && editando()!.estado !== 'TERMINADO') {
       <div class="gp-campo">
         <label for="p-est">Estado</label>
@@ -248,6 +307,7 @@
   [modal]="true"
   [style]="{ width: 'min(480px, calc(100vw - 32px))' }"
   [draggable]="false"
+  styleClass="dialogo-proyecto"
 >
   @if (cierre(); as p) {
     <p class="texto-cierre">

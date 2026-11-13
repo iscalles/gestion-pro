@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -30,6 +30,8 @@ import { Usuario } from '../../../../core/auth/auth.models';
 import { erroresDeCampos, mensajeDeError } from '../../../../core/api/api-error';
 import { recordarProyecto } from '../../../../shared/util/contexto-proyecto';
 import { hoyIso } from '../../../../shared/util/formato';
+import { Contar } from '../../../../shared/ui/movimiento/contar';
+import { DURACION } from '../../../../shared/ui/movimiento/movimiento';
 import { ProyectosService } from '../../data/proyectos.service';
 import { ESTADO_PROYECTO, EstadoProyecto, Proyecto, ProyectoRequest } from '../../models/proyecto.model';
 
@@ -51,7 +53,7 @@ interface FormProyecto {
   imports: [DecimalPipe, 
     DatePipe, RouterLink, FormsModule, TableModule, ButtonModule, InputTextModule, InputNumberModule, TextareaModule,
     SelectModule, MultiSelectModule, ProgressBarModule, IconFieldModule, InputIconModule, MessageModule, SkeletonModule,
-    DialogModule, ToastModule, ConfirmDialogModule, MenuModule, TooltipModule, PageHeader, StatusBadge, ClpPipe,
+    DialogModule, ToastModule, ConfirmDialogModule, MenuModule, TooltipModule, PageHeader, StatusBadge, ClpPipe, Contar,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './proyectos-lista.html',
@@ -70,10 +72,20 @@ export class ProyectosLista {
   protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
 
+  /** Visual: las barras de avance se dibujan solo la primera vez que la tabla muestra datos. */
+  protected readonly primeraCarga = signal(true);
+
   constructor() {
     this.cargar();
     this.usuariosServicio.listar().subscribe({ next: (u) => this.usuarios.set(u), error: () => {} });
     this.servicio.calendarios().subscribe({ next: (c) => this.calendarios.set(c), error: () => {} });
+
+    // Visual: después del primer dibujo, filtros y ediciones ya no repiten la animación.
+    effect((onCleanup) => {
+      if (this.cargando() || this.error() || !this.primeraCarga()) return;
+      const t = setTimeout(() => this.primeraCarga.set(false), DURACION.dibujo + 200);
+      onCleanup(() => clearTimeout(t));
+    });
   }
 
   protected cargar(): void {

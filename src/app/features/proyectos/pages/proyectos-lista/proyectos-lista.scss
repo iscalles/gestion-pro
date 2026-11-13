@@ -1,47 +1,17 @@
-.pagina {
-  padding: var(--gp-space-8);
-  max-width: 1440px;
-}
-
-.resumen {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gp-space-8);
-  margin: 0 0 var(--gp-space-5);
-
-  div {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  dt {
-    font-size: var(--gp-text-sm);
-    color: var(--gp-text-muted);
-  }
-
-  dd {
-    margin: 0;
-    font-size: var(--gp-text-xl);
-    font-weight: 700;
-    text-align: left;
-
-    span {
-      font-size: var(--gp-text-md);
-      font-weight: 400;
-      color: var(--gp-text-muted);
-    }
-  }
-}
+// Proyectos: regleta de cifras, filtros y una tabla densa que cabe sin desplazamiento a 1440 px.
+// La tabla usa .gp-tabla (global); aquí solo van el ancho de cada columna y la forma de sus celdas.
 
 .panel {
   overflow: hidden;
 }
 
+// ---------------------------------------------------------------- filtros
+
 .filtros {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gp-space-3);
+  align-items: flex-end;
+  gap: var(--gp-space-3) var(--gp-space-4);
   padding: var(--gp-space-4);
   border-bottom: 1px solid var(--gp-line);
 }
@@ -50,6 +20,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
   flex: 0 1 220px;
 
   label {
@@ -61,33 +32,97 @@
     flex: 1 1 280px;
   }
 
+  p-iconfield,
   input {
     width: 100%;
   }
 }
 
-:host ::ng-deep {
-  .select-estado {
-    width: 100%;
-  }
+:host ::ng-deep .select-estado {
+  width: 100%;
+}
 
+// ---------------------------------------------------------------- tabla
+
+:host ::ng-deep .tabla {
+  // Celdas con 10 px a los lados: las diez columnas caben a 1440 px sin desplazamiento
   .p-datatable-thead > tr > th {
-    background: var(--gp-canvas);
-    color: var(--gp-text-muted);
-    font-size: var(--gp-text-sm);
-    font-weight: 500;
-    white-space: nowrap;
+    padding: var(--gp-space-3) 10px 10px;
+    vertical-align: bottom;
+    line-height: 1.3;
+
+    &.partir {
+      white-space: normal;
+    }
   }
 
+  // Filas de 44 px con una línea. Las celdas de dos líneas se alinean por la primera línea de texto
   .p-datatable-tbody > tr > td {
-    border-color: var(--gp-line);
+    padding: 11px 10px;
+    vertical-align: baseline;
+    line-height: 1.5;
+
+    &.acciones {
+      vertical-align: top;
+    }
+  }
+
+  .p-datatable-thead > tr > th:first-child,
+  .p-datatable-tbody > tr > td:first-child {
+    padding-left: var(--gp-space-4);
+  }
+
+  .p-datatable-thead > tr > th:last-child,
+  .p-datatable-tbody > tr > td:last-child {
+    padding-inline: 4px var(--gp-space-2);
+  }
+
+  // Hover instantáneo (uso continuo)
+  .p-datatable-tbody > tr {
+    transition: none;
+
+    &:hover > td {
+      background: var(--gp-hover);
+    }
+  }
+
+  .p-datatable-tbody > tr > td.celda-vacia {
+    padding: 0;
+    background: var(--gp-surface);
+  }
+
+  // Avance: el valor arriba y una barra fina debajo, que se dibuja de izquierda a derecha
+  .p-progressbar {
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  .p-progressbar-value {
+    transition: none;
+  }
+
+  &.dibujar .p-progressbar-value {
+    transform-origin: left center;
+    // 320 ms por barra y hasta 180 ms de escalonado entre filas: todo termina antes de 500 ms
+    animation: gp-desplegar-x 320ms var(--gp-ease-out) both;
+    animation-delay: calc(min(var(--fila, 0), 6) * 30ms);
   }
 }
 
-.codigo,
-.fecha {
+.junto {
   white-space: nowrap;
+}
+
+.codigo {
+  white-space: nowrap;
+  font-size: var(--gp-text-sm);
   color: var(--gp-text-muted);
+}
+
+// El nombre es la columna que cede: envuelve en lugar de empujar la tabla
+.proyecto {
+  min-width: 9rem;
+  overflow-wrap: break-word;
 }
 
 .nombre {
@@ -99,56 +134,42 @@
   }
 }
 
-.col-avance {
-  width: 170px;
-}
-
-.avance {
-  display: flex;
-  align-items: center;
-  gap: var(--gp-space-2);
-
-  p-progressbar {
-    flex: 1;
-  }
-
-  ::ng-deep .p-progressbar {
-    height: 6px;
-  }
-
-  span {
-    width: 40px;
-    font-size: var(--gp-text-sm);
-  }
-}
-
-.vacio {
-  text-align: center;
-  color: var(--gp-text-muted);
-  padding: var(--gp-space-8) !important;
-}
-
-@media (max-width: 640px) {
-  .pagina {
-    padding: var(--gp-space-4);
-  }
-}
-
-.estado-carga {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--gp-space-3);
-  padding: var(--gp-space-5) var(--gp-space-4);
-
-  p-skeleton {
-    width: 100%;
-  }
-}
-
 .sub {
   display: block;
+  width: fit-content;
+  margin-top: 2px;
   font-size: var(--gp-text-xs);
+}
+
+.fecha {
+  white-space: nowrap;
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
+}
+
+.linea {
+  display: block;
+}
+
+.rotulo {
+  display: block;
+  font-size: var(--gp-text-xs);
+}
+
+.previsto {
+  color: var(--gp-text);
+}
+
+.tarde {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gp-warn);
+  font-weight: 500;
+
+  i {
+    font-size: 0.8125rem;
+  }
 }
 
 .sub-num {
@@ -156,20 +177,100 @@
   color: var(--gp-text-muted);
 }
 
-.tarde {
-  color: var(--gp-warn);
-  font-weight: 500;
+.col-avance {
+  width: 6rem;
 }
 
-.acciones {
-  white-space: nowrap;
-  text-align: right;
+.avance {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 4.5rem;
+  margin-left: auto;
+
+  .valor {
+    font-size: var(--gp-text-sm);
+    line-height: 1.4;
+  }
+
+  .unidad {
+    margin-left: 1px;
+    font-size: 0.85em;
+    color: var(--gp-text-muted);
+  }
+}
+
+.acciones .gp-acciones-fila {
+  margin-block: -4px;
+}
+
+// ---------------------------------------------------------------- carga y error
+
+.estado-error {
+  padding: var(--gp-space-6) var(--gp-space-4);
+}
+
+// Esqueleto con la forma de la tabla: filas de la misma altura separadas por líneas finas
+.esqueleto {
+  padding-block: var(--gp-space-2);
+}
+
+.esqueleto-fila {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) 6rem 6rem 6rem 6.5rem 4.5rem;
+  align-items: center;
+  gap: var(--gp-space-5);
+  min-height: 52px;
+  padding-inline: var(--gp-space-4);
+
+  & + & {
+    border-top: 1px solid var(--gp-line);
+  }
+}
+
+// ---------------------------------------------------------------- diálogos
+
+.separador {
+  margin: var(--gp-space-1) 0;
+  border: 0;
+  border-top: 1px solid var(--gp-line);
 }
 
 .texto-cierre {
   margin: 0 0 var(--gp-space-4);
+  text-wrap: pretty;
 }
 
-:host ::ng-deep .msg-form {
-  margin-top: var(--gp-space-3);
+:host ::ng-deep {
+  .dialogo-proyecto {
+    .p-dialog-header {
+      padding: var(--gp-space-5) var(--gp-space-6) var(--gp-space-4);
+      border-bottom: 1px solid var(--gp-line);
+    }
+
+    .p-dialog-content {
+      padding: var(--gp-space-5) var(--gp-space-6);
+    }
+
+    .p-dialog-footer {
+      padding: var(--gp-space-4) var(--gp-space-6);
+      border-top: 1px solid var(--gp-line);
+    }
+  }
+
+  .msg-form {
+    margin-top: var(--gp-space-4);
+  }
+}
+
+// ---------------------------------------------------------------- pantallas angostas
+
+@media (max-width: 1100px) {
+  .esqueleto-fila {
+    grid-template-columns: 5.5rem minmax(0, 1fr) 6.5rem 4.5rem;
+
+    > :nth-child(n + 3):nth-child(-n + 5) {
+      display: none;
+    }
+  }
 }

@@ -1,9 +1,10 @@
-import { Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { ROL_ETIQUETA } from '../../auth/auth.models';
 import { MENU } from '../navegacion';
 import { animarIndicadoresDePestanas } from '../../../shared/ui/movimiento/indicador-pestanas';
+import { prefiereMenosMovimiento } from '../../../shared/ui/movimiento/movimiento';
 
 @Component({
   selector: 'gp-shell',
@@ -14,6 +15,8 @@ import { animarIndicadoresDePestanas } from '../../../shared/ui/movimiento/indic
 export class Shell {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
+  private readonly indicador = viewChild.required<ElementRef<HTMLElement>>('indicador');
 
   protected readonly usuario = this.auth.usuario;
   protected readonly menuAbierto = signal(false);
@@ -38,6 +41,8 @@ export class Shell {
     // Visual: el indicador de pestañas de toda la app se desliza con transform.
     const destroy = inject(DestroyRef);
     afterNextRender(() => destroy.onDestroy(animarIndicadoresDePestanas(document.body)));
+    // Visual: el indicador del menú lateral sigue al ítem activo.
+    afterNextRender(() => destroy.onDestroy(this.seguirItemActivo()));
   }
 
   protected alternarMenu(): void {
@@ -47,5 +52,52 @@ export class Shell {
   protected cerrarSesion(): void {
     this.auth.logout();
     this.router.navigateByUrl('/login');
+  }
+
+  /**
+   * Coloca el indicador turquesa junto al ítem activo del menú y lo desliza (translateY, 200 ms) cuando
+   * cambia la ruta. Solo lee la clase `activo` que pone routerLinkActive: no conoce el router.
+   * La primera colocación, y cada vez que el menú reaparece o cambia de tamaño, es instantánea.
+   */
+  private seguirItemActivo(): () => void {
+    const nav = this.nav().nativeElement;
+    const marca = this.indicador().nativeElement;
+    let visible = false;
+
+    const colocar = (deslizar: boolean) => {
+      const activo = nav.querySelector<HTMLElement>('a.activo');
+      // Sin ítem activo o con el menú oculto (barra superior cerrada): se esconde sin animar.
+      if (!activo || activo.offsetParent === null) {
+        marca.style.opacity = '0';
+        visible = false;
+        return;
+      }
+      const y = Math.round(activo.offsetTop + (activo.offsetHeight - marca.offsetHeight) / 2);
+      const transform = `translateY(${y}px)`;
+      if (visible && deslizar && !prefiereMenosMovimiento()) {
+        marca.style.transform = transform;
+        return;
+      }
+      marca.style.transition = 'none';
+      marca.style.transform = transform;
+      marca.style.opacity = '1';
+      visible = true;
+      void marca.offsetWidth; // fija la posición antes de devolver la transición
+      marca.style.transition = '';
+    };
+
+    // routerLinkActive cambia la clase del enlace al navegar: el indicador se desliza.
+    const clases = new MutationObserver(() => colocar(true));
+    clases.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    // El menú aparece, se oculta o cambia de alto (barra superior, fuentes, ventana): sin deslizar.
+    const tamano = new ResizeObserver(() => colocar(false));
+    tamano.observe(nav);
+    nav.querySelectorAll<HTMLElement>('.grupo').forEach((g) => tamano.observe(g));
+    colocar(false);
+
+    return () => {
+      clases.disconnect();
+      tamano.disconnect();
+    };
   }
 }

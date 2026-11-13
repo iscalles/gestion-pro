@@ -53,7 +53,7 @@ export interface Evidencia {
             <i class="pi pi-file" aria-hidden="true"></i>
             <span class="datos">
               <button type="button" class="nombre" (click)="descargar(e)">{{ e.nombreArchivo }}</button>
-              <span class="gp-tenue">{{ tamano(e.tamanoBytes) }} · {{ e.subidoPor ?? '—' }} · {{ e.subidoEn | date: 'dd-MM-yyyy HH:mm' }}</span>
+              <span class="gp-tenue meta">{{ tamano(e.tamanoBytes) }} · {{ e.subidoPor ?? '—' }} · {{ e.subidoEn | date: 'dd-MM-yyyy HH:mm' }}</span>
             </span>
             @if (editable() && (esAdmin() || e.subidoPorId === usuarioId())) {
               <p-button icon="pi pi-trash" [text]="true" severity="danger" size="small" [ariaLabel]="'Eliminar ' + e.nombreArchivo" (onClick)="eliminar(e)" />
@@ -64,17 +64,75 @@ export interface Evidencia {
     }
   `,
   styles: `
-    .cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-    h3 { font-size: var(--gp-text-md); }
-    ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-    li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid var(--gp-line); border-radius: var(--gp-radius-sm); }
-    li > i { color: var(--gp-data); }
-    .datos { display: flex; flex-direction: column; flex: 1; min-width: 0; font-size: var(--gp-text-sm); }
-    .nombre { all: unset; cursor: pointer; color: var(--gp-accent); overflow-wrap: anywhere; }
-    .nombre:hover { text-decoration: underline; }
-    .nombre:focus-visible { box-shadow: var(--gp-focus); border-radius: 2px; }
-    .vacio { margin: 0; font-size: var(--gp-text-sm); }
-    :host ::ng-deep .msg { margin-bottom: 8px; }
+    .cab {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--gp-space-2);
+      margin-bottom: var(--gp-space-2);
+    }
+    h3 {
+      font-size: var(--gp-text-md);
+    }
+    /* Lista con líneas finas, no cajas por archivo */
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-top: 1px solid var(--gp-line);
+    }
+    li {
+      display: flex;
+      align-items: center;
+      gap: var(--gp-space-3);
+      min-height: 44px;
+      padding: 6px 0 6px 2px;
+      border-bottom: 1px solid var(--gp-line);
+    }
+    li > i {
+      flex: none;
+      font-size: 0.9375rem;
+      color: var(--gp-data);
+    }
+    .datos {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      font-size: var(--gp-text-sm);
+      line-height: 1.4;
+    }
+    .nombre {
+      all: unset;
+      width: fit-content;
+      max-width: 100%;
+      cursor: pointer;
+      color: var(--gp-accent);
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+    .nombre:hover {
+      color: var(--gp-accent-hover);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+    .nombre:focus-visible {
+      box-shadow: var(--gp-focus);
+      border-radius: 2px;
+    }
+    .meta {
+      font-size: var(--gp-text-xs);
+      font-variant-numeric: tabular-nums;
+    }
+    .vacio {
+      margin: 0;
+      padding: var(--gp-space-3) 0;
+      border-top: 1px solid var(--gp-line);
+      font-size: var(--gp-text-sm);
+    }
+    :host ::ng-deep .msg {
+      margin-bottom: var(--gp-space-2);
+    }
   `,
 })
 export class Evidencias {

@@ -1,5 +1,5 @@
 <div class="shell">
-  <aside class="sidebar" [class.abierto]="menuAbierto()">
+  <aside class="riel" [class.abierto]="menuAbierto()">
     <div class="marca">
       <a routerLink="/proyectos" class="marca-link">
         <svg class="marca-icono" viewBox="0 0 24 24" aria-hidden="true">
@@ -21,7 +21,8 @@
       </button>
     </div>
 
-    <nav id="nav-principal" aria-label="Navegación principal">
+    <nav id="nav-principal" aria-label="Navegación principal" #nav>
+      <span class="indicador" aria-hidden="true" #indicador></span>
       @for (grupo of menu(); track grupo.titulo) {
         <div class="grupo">
           <p class="grupo-titulo">{{ grupo.titulo }}</p>
@@ -35,7 +36,7 @@
                   (click)="menuAbierto.set(false)"
                 >
                   <i [class]="item.icono" aria-hidden="true"></i>
-                  {{ item.etiqueta }}
+                  <span>{{ item.etiqueta }}</span>
                 </a>
               </li>
             }
