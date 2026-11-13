@@ -16,6 +16,7 @@ import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { SelectorProyecto } from '../../../../shared/ui/selector-proyecto/selector-proyecto';
 import { StatusBadge } from '../../../../shared/ui/status-badge/status-badge';
 import { ClpPipe } from '../../../../shared/pipes/clp.pipe';
+import { DURACION } from '../../../../shared/ui/movimiento/movimiento';
 import { contextoProyecto } from '../../../../shared/util/contexto-proyecto';
 import { mensajeDeError } from '../../../../core/api/api-error';
 import { CambiosService } from '../../data/cambios.service';
@@ -50,6 +51,8 @@ export class CambiosLista {
   protected readonly error = signal<string | null>(null);
   protected readonly pestana = signal<string | number | undefined>('solicitudes');
   protected readonly nueva = signal(false);
+  /** Visual: las barras de etapa se dibujan solo la primera vez que la pantalla muestra solicitudes. */
+  protected readonly primeraCarga = signal(true);
 
   protected readonly estadoFiltro = signal<EstadoSolicitud | null>(null);
   protected readonly tipoFiltro = signal<TipoCambio | null>(null);
@@ -69,6 +72,11 @@ export class CambiosLista {
     effect(() => {
       const id = this.ctx.proyectoId();
       if (id != null) untracked(() => this.cargar(id));
+    });
+    effect((onCleanup) => {
+      if (!this.primeraCarga() || this.solicitudes().length === 0) return;
+      const t = setTimeout(() => this.primeraCarga.set(false), DURACION.dibujo + 100);
+      onCleanup(() => clearTimeout(t));
     });
   }
 

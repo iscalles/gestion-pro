@@ -91,7 +91,7 @@
           <label for="s-imp">Impacto</label>
           <p-select inputId="s-imp" name="impacto" [options]="opImpacto" optionLabel="label" optionValue="value" [(ngModel)]="f.impacto" (ngModelChange)="cambioRiesgo()" [showClear]="true" placeholder="Sin evaluar" appendTo="body" />
         </div>
-        <p class="gp-completo gp-ayuda">
+        <p class="gp-completo gp-ayuda nivel">
           Nivel resultante: <gp-status-badge [tono]="riesgo().tono">{{ riesgo().etiqueta }}</gp-status-badge>
           — se exige antes de pasar a la etapa de aprobación.
         </p>

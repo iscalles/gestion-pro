@@ -65,30 +65,32 @@
     @if (f.fuente === 'AUTOMATICA' || f.formula) {
       <div class="gp-campo gp-completo">
         <label for="k-for">Fórmula</label>
-        <textarea #areaFormula pTextarea id="k-for" name="formula" class="formula" [(ngModel)]="f.formula" (ngModelChange)="prueba.set(null)" rows="2" maxlength="1000" placeholder="Ej.: (AVANCE_REAL / AVANCE_PLAN) * 100"></textarea>
-        <p class="gp-ayuda">Operadores + − × ÷ ( ), y las funciones min(a, b) y max(a, b). Pulsa una variable para insertarla.</p>
-        <div class="gp-chips" role="group" aria-label="Variables disponibles">
-          @for (v of variablesDe(f.categoria); track v.codigo) {
-            <button type="button" class="gp-chip" [title]="v.descripcion + ' (' + v.unidad + ')'" (click)="insertar(v.codigo)">{{ v.codigo }}</button>
+        <div class="banco">
+          <textarea #areaFormula pTextarea id="k-for" name="formula" class="formula" [(ngModel)]="f.formula" (ngModelChange)="prueba.set(null)" rows="2" maxlength="1000" placeholder="Ej.: (AVANCE_REAL / AVANCE_PLAN) * 100"></textarea>
+          <p class="gp-ayuda">Operadores + − × ÷ ( ), y las funciones min(a, b) y max(a, b). Pulsa una variable para insertarla.</p>
+          <div class="gp-chips variables" role="group" aria-label="Variables disponibles">
+            @for (v of variablesDe(f.categoria); track v.codigo) {
+              <button type="button" class="gp-chip" [title]="v.descripcion + ' (' + v.unidad + ')'" (click)="insertar(v.codigo)">{{ v.codigo }}</button>
+            }
+          </div>
+          <div class="prueba">
+            <p-button label="Probar con los datos de hoy" icon="pi pi-play" size="small" [outlined]="true" (onClick)="probar()" [loading]="probando()" [disabled]="!f.formula.trim()" />
+            @if (prueba(); as p) {
+              @if (p.mensaje) {
+                <p-message severity="warn" [text]="p.mensaje" styleClass="gp-anim-entrar" />
+              } @else {
+                <span class="resultado gp-anim-entrar" role="status">Resultado: <strong>{{ fmt(p.valor) }}</strong></span>
+              }
+            }
+          </div>
+          @if (prueba()?.variables?.length) {
+            <ul class="valores">
+              @for (v of prueba()!.variables; track v.codigo) {
+                <li><code>{{ v.codigo }}</code> <span class="desc">{{ v.descripcion }}:</span> <span class="dato"><strong>{{ v.valor ?? 'sin dato' }}</strong> {{ v.unidad }}</span></li>
+              }
+            </ul>
           }
         </div>
-        <div class="prueba">
-          <p-button label="Probar con los datos de hoy" icon="pi pi-play" size="small" [outlined]="true" (onClick)="probar()" [loading]="probando()" [disabled]="!f.formula.trim()" />
-          @if (prueba(); as p) {
-            @if (p.mensaje) {
-              <p-message severity="warn" [text]="p.mensaje" />
-            } @else {
-              <span class="resultado">Resultado: <strong>{{ fmt(p.valor) }}</strong></span>
-            }
-          }
-        </div>
-        @if (prueba()?.variables?.length) {
-          <ul class="valores">
-            @for (v of prueba()!.variables; track v.codigo) {
-              <li><code>{{ v.codigo }}</code> {{ v.descripcion }}: <strong>{{ v.valor ?? 'sin dato' }}</strong> {{ v.unidad }}</li>
-            }
-          </ul>
-        }
       </div>
     }
 

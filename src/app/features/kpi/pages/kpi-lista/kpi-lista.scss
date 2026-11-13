@@ -1,25 +1,45 @@
-.detalle {
-  margin-top: var(--gp-space-4);
+// Indicadores: regleta de semáforo, tabla con el valor como protagonista y ficha del KPI elegido.
+
+.alerta {
+  color: var(--gp-warn);
 }
 
-.cab {
-  border-bottom: 1px solid var(--gp-line);
-  margin: 0;
-}
+// ------------------------------------------------------------------ tabla
 
-h3 {
-  font-size: var(--gp-text-md);
-  margin-bottom: var(--gp-space-2);
+:host ::ng-deep .tabla-kpi {
+  .p-datatable-tbody > tr > td {
+    padding-block: 10px;
+  }
+
+  .col-codigo {
+    width: 5.5rem;
+  }
+
+  .col-tendencia {
+    width: 8.5rem;
+  }
+
+  .col-acciones {
+    width: 6rem;
+  }
+
+  tr.inactivo > td {
+    opacity: 0.6;
+  }
 }
 
 .enlace {
   all: unset;
+  display: block;
   cursor: pointer;
   font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 
   &:hover {
     color: var(--gp-accent);
     text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   &:focus-visible {
@@ -28,37 +48,162 @@ h3 {
   }
 }
 
+.sub {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--gp-text-sm);
+  line-height: 1.35;
+}
+
+// Valor actual: cifra grande con la unidad al lado, más pequeña
+.valor {
+  display: block;
+  font-size: var(--gp-text-xl);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+
+  &.sin-dato {
+    font-size: var(--gp-text-sm);
+    font-weight: 500;
+    color: var(--gp-text-subtle);
+  }
+}
+
 .var {
+  display: block;
+  margin-top: 2px;
   font-size: var(--gp-text-xs);
   white-space: nowrap;
 }
 
-.alerta {
-  color: var(--gp-warn);
+.meta {
+  color: var(--gp-text-muted);
 }
 
-:host ::ng-deep tr.inactivo > td {
-  opacity: 0.6;
+// ------------------------------------------------------------------ estados
+
+.carga-filas {
+  gap: 0;
+  padding: 0;
+}
+
+.sk-fila {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr) 6rem 7rem 7rem;
+  align-items: center;
+  gap: var(--gp-space-5);
+  width: 100%;
+  padding: 14px var(--gp-space-5);
+
+  & + & {
+    border-top: 1px solid var(--gp-line);
+  }
+}
+
+.error-icono {
+  color: var(--gp-danger);
+}
+
+.vacio-corto {
+  padding-block: var(--gp-space-5);
+}
+
+// ------------------------------------------------------------------ ficha del KPI elegido
+
+.detalle {
+  margin-top: var(--gp-space-6);
+}
+
+// La ficha aparece al elegir un KPI: entra de inmediato, sin el escalonado de la carga de la página
+.gp-pagina > .detalle {
+  animation-delay: 0ms;
+}
+
+.cab {
+  margin: 0;
+  border-bottom: 1px solid var(--gp-line);
+
+  h2 {
+    font-size: var(--gp-text-xl);
+  }
+
+  .gp-codigo {
+    margin-right: 4px;
+    font-weight: 500;
+  }
+}
+
+.ficha-kpi {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  row-gap: var(--gp-space-5);
+}
+
+.destacado {
+  grid-column: span 2;
+
+  @media (max-width: 640px) {
+    grid-column: 1 / -1;
+  }
+}
+
+.valor-grande {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gp-space-3);
+}
+
+.cifra {
+  font-size: var(--gp-text-3xl);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+
+  &.sin-dato {
+    font-size: var(--gp-text-lg);
+    color: var(--gp-text-subtle);
+  }
+}
+
+.valor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cifra-meta {
+  font-size: var(--gp-text-xl);
+  font-weight: 700;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
 }
 
 .ancho {
   grid-column: 1 / -1;
 }
 
-.valor {
-  display: flex;
-  align-items: center;
-  gap: var(--gp-space-2);
-  font-weight: 700;
-}
-
 .formula {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--gp-line);
+  border-radius: var(--gp-radius-sm);
+  background: var(--gp-canvas);
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   font-size: var(--gp-text-sm);
-  background: var(--gp-canvas);
-  padding: 2px 6px;
-  border-radius: var(--gp-radius-sm);
   overflow-wrap: anywhere;
+}
+
+h3 {
+  margin-bottom: var(--gp-space-3);
+  font-size: var(--gp-text-md);
+}
+
+.valor-medicion {
+  font-weight: 500;
 }
 
 .texto {

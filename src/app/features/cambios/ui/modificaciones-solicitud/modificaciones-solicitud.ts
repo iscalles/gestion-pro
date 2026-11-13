@@ -35,23 +35,28 @@ import { fmtValorCambio } from '../../util/valores';
           <p-button label="Agregar modificación" icon="pi pi-plus" [outlined]="true" (onClick)="abrir()" />
         }
       </div>
-      <p-table [value]="solicitud().modificaciones" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '820px' }" dataKey="id">
+      <p-table [value]="solicitud().modificaciones" styleClass="gp-tabla tabla-mods" [tableStyle]="{ 'min-width': '760px' }" dataKey="id">
         <ng-template #header>
           <tr>
             <th>Elemento</th>
             <th>Campo</th>
             <th class="num">Valor {{ editable() ? 'actual' : 'anterior' }}</th>
+            <th class="c-flecha" aria-hidden="true"></th>
             <th class="num">Valor nuevo</th>
             <th>Estado</th>
-            <th><span class="sr-only">Acciones</span></th>
+            <th class="c-acciones"><span class="sr-only">Acciones</span></th>
           </tr>
         </ng-template>
         <ng-template #body let-m>
           <tr>
-            <td>{{ m.entidadNombre }}<br /><span class="gp-tenue">{{ entidad[$any(m.entidad)] }}</span></td>
+            <td>
+              <span class="elemento">{{ m.entidadNombre }}</span>
+              <span class="gp-tenue tipo">{{ entidad[$any(m.entidad)] }}</span>
+            </td>
             <td>{{ m.campoNombre }}</td>
-            <td class="num">{{ fmt(m.aplicada ? m.valorAnterior : m.valorActual) }}</td>
-            <td class="num"><strong>{{ fmt(m.valorNuevo) }}</strong></td>
+            <td class="num antes">{{ fmt(m.aplicada ? m.valorAnterior : m.valorActual) }}</td>
+            <td class="c-flecha" aria-hidden="true"><i class="pi pi-arrow-right"></i></td>
+            <td class="num despues"><strong>{{ fmt(m.valorNuevo) }}</strong></td>
             <td><gp-status-badge [tono]="m.aplicada ? 'ok' : 'neutral'">{{ m.aplicada ? 'Aplicada' : 'Pendiente' }}</gp-status-badge></td>
             <td>
               @if (editable()) {
@@ -63,7 +68,14 @@ import { fmtValorCambio } from '../../util/valores';
           </tr>
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td colspan="6" class="gp-vacio">Sin modificaciones: la aprobación no cambiará el plan.</td></tr>
+          <tr>
+            <td colspan="7">
+              <div class="gp-vacio vacio">
+                <i class="pi pi-sliders-h" aria-hidden="true"></i>
+                <p>Sin modificaciones: la aprobación no cambiará el plan.</p>
+              </div>
+            </td>
+          </tr>
         </ng-template>
       </p-table>
     </div>
@@ -82,7 +94,7 @@ import { fmtValorCambio } from '../../util/valores';
           @if (campoSel(); as c) {
             <div class="gp-campo">
               <span class="gp-etiqueta">Valor actual</span>
-              <strong>{{ fmt(c.valorActual) }}</strong>
+              <strong class="valor-actual">{{ fmt(c.valorActual) }}</strong>
             </div>
             <div class="gp-campo gp-completo">
               <label for="md-val">Valor nuevo</label>
@@ -111,6 +123,17 @@ import { fmtValorCambio } from '../../util/valores';
         </div>
       </ng-template>
     </p-dialog>
+  `,
+  styles: `
+    .elemento, .tipo { display: block; line-height: 1.35; }
+    .tipo { margin-top: 2px; font-size: var(--gp-text-sm); }
+    .antes { color: var(--gp-text-muted); }
+    .despues strong { font-size: var(--gp-text-lg); letter-spacing: -0.01em; }
+    .c-flecha { width: 1.5rem; padding-inline: 0; text-align: center; color: var(--gp-text-subtle); }
+    .c-flecha i { font-size: 0.75rem; }
+    .c-acciones { width: 3.5rem; }
+    .vacio { padding-block: var(--gp-space-5); }
+    .valor-actual { display: flex; align-items: center; min-height: 2.5rem; font-size: var(--gp-text-lg); font-variant-numeric: tabular-nums; }
   `,
 })
 export class ModificacionesSolicitud {

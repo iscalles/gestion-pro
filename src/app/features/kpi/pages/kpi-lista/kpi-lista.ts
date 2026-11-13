@@ -16,6 +16,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { SelectorProyecto } from '../../../../shared/ui/selector-proyecto/selector-proyecto';
 import { SemaforoBadge } from '../../../../shared/ui/semaforo/semaforo';
+import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
 import { Sparkline } from '../../../../shared/graficos/sparkline';
 import { GraficoLineas, SerieLinea } from '../../../../shared/graficos/grafico-lineas';
 import { SERIE } from '../../../../shared/graficos/paleta';
@@ -32,7 +33,7 @@ import { KpiFormulario } from '../../ui/kpi-formulario/kpi-formulario';
   imports: [
     DatePipe, FormsModule, TableModule, ButtonModule, DialogModule, InputNumberModule, InputTextModule,
     MessageModule, SelectModule, SkeletonModule, TextareaModule, ToastModule, ConfirmDialogModule, PageHeader,
-    SelectorProyecto, SemaforoBadge, Sparkline, GraficoLineas, KpiFormulario,
+    SelectorProyecto, SemaforoBadge, Sparkline, GraficoLineas, KpiFormulario, Resaltar,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './kpi-lista.html',
@@ -126,6 +127,15 @@ export class KpiLista {
     ];
     return { etiquetas: h.map((m) => fmtFechaCorta(m.medidoEn.slice(0, 10))), series };
   });
+
+  /** Visual: la fila de un KPI se conserva al recibir su versión nueva, así el valor recalculado se resalta. */
+  protected readonly porId = (_: number, k: Kpi) => k.id;
+
+  /** Visual: separa la unidad final del texto ya formateado («66,67 %» → «66,67» y «%») para mostrarla más pequeña. */
+  protected cifra(texto: string): { valor: string; unidad: string } {
+    const m = /^(.*\d)\s+(\D.*)$/.exec(texto);
+    return m ? { valor: m[1], unidad: m[2] } : { valor: texto, unidad: '' };
+  }
 
   protected tendencia(k: Kpi): number[] {
     return [...k.historial]

@@ -1,11 +1,105 @@
+// Solicitudes de cambio: regleta, pestañas y una tabla que cabe sin desplazamiento a 1440 px.
+
+.error-icono {
+  color: var(--gp-danger);
+}
+
+// ------------------------------------------------------------------ pestañas
+
+:host ::ng-deep .pestanas {
+  .p-tablist {
+    margin-bottom: 0;
+  }
+
+  .p-tablist-tab-list {
+    padding-inline: var(--gp-space-5);
+  }
+}
+
+.cuenta {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--gp-text-muted);
+}
+
 .filtros {
-  margin-bottom: var(--gp-space-3);
+  margin-bottom: var(--gp-space-4);
+}
+
+// ------------------------------------------------------------------ tabla de solicitudes
+
+:host ::ng-deep .tabla-solicitudes {
+  // encabezados al pie y celdas arriba: las celdas de dos líneas quedan alineadas por su primera línea
+  .p-datatable-thead > tr > th {
+    padding: 12px;
+    vertical-align: bottom;
+  }
+
+  .p-datatable-tbody > tr > td {
+    padding: 12px;
+    vertical-align: top;
+  }
+
+  .c-codigo {
+    width: 4.75rem;
+  }
+
+  .c-tipo {
+    width: 6.5rem;
+  }
+
+  .c-pila {
+    width: 8.25rem;
+  }
+
+  .c-etapa {
+    width: 11.75rem;
+  }
+
+  .c-fecha {
+    width: 7rem;
+  }
+
+  .c-costo {
+    width: 7.75rem;
+    white-space: normal;
+  }
+
+  // Encabezado de dos líneas: describe las dos líneas de la celda
+  .th-1,
+  .th-2 {
+    display: block;
+  }
+
+  // Avance de etapa: barra fina, sin transición de ancho (solo se dibuja con transform)
+  .p-progressbar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--gp-line);
+  }
+
+  .p-progressbar-value {
+    border-radius: 2px;
+    transition: none;
+  }
+}
+
+// La primera vez que se ven, las barras se dibujan de izquierda a derecha
+:host ::ng-deep .dibujar .tabla-solicitudes .p-progressbar-value {
+  transform-origin: left center;
+  animation: gp-desplegar-x var(--gp-dur-dibujo) var(--gp-ease-out) both;
+}
+
+:host ::ng-deep .tabla-acciones .c-codigo {
+  width: 6rem;
 }
 
 .nombre {
   color: var(--gp-text);
   font-weight: 500;
+  line-height: 1.35;
   text-decoration: none;
+  overflow-wrap: anywhere;
 
   &:hover {
     color: var(--gp-accent);
@@ -13,14 +107,85 @@
   }
 }
 
+.sub {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--gp-text-sm);
+  line-height: 1.35;
+}
+
+.pila {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
 .etapa {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 170px;
+  gap: 5px;
+  width: 100%;
   font-size: var(--gp-text-sm);
+  line-height: 1.3;
 
-  ::ng-deep .p-progressbar {
-    height: 4px;
+  strong {
+    font-variant-numeric: tabular-nums;
   }
+}
+
+.etapa-texto {
+  text-wrap: balance;
+}
+
+.fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+
+  i {
+    font-size: 0.8rem;
+  }
+}
+
+.costo,
+.costo-real {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
+.costo {
+  font-weight: 500;
+}
+
+.costo-real {
+  margin-top: 2px;
+  font-size: var(--gp-text-sm);
+}
+
+// ------------------------------------------------------------------ carga
+
+.carga-filas {
+  gap: 0;
+  padding: 0;
+}
+
+.sk-fila {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr) 7rem 10rem 6rem;
+  align-items: start;
+  gap: var(--gp-space-5);
+  width: 100%;
+  padding: 14px 0;
+
+  & + & {
+    border-top: 1px solid var(--gp-line);
+  }
+}
+
+.sk-pila {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

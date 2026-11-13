@@ -30,8 +30,8 @@ import { AccionCorrectiva, Solicitud } from '../../models/cambio.model';
         @for (a of solicitud().acciones; track a.id) {
           <li>
             <div class="texto">
-              <span>{{ a.descripcion }}</span>
-              <span class="gp-tenue">
+              <span class="desc">{{ a.descripcion }}</span>
+              <span class="gp-tenue gp-tnum">
                 {{ a.responsable }} · compromiso {{ a.fechaCompromiso | date: 'dd-MM-yyyy' }}
                 @if (a.fechaCierre) {
                   · cerrada {{ a.fechaCierre | date: 'dd-MM-yyyy' }}
@@ -52,7 +52,7 @@ import { AccionCorrectiva, Solicitud } from '../../models/cambio.model';
             }
           </li>
         } @empty {
-          <li class="gp-tenue">Sin acciones correctivas.</li>
+          <li class="vacio"><i class="pi pi-wrench" aria-hidden="true"></i> Sin acciones correctivas.</li>
         }
       </ul>
     </div>
@@ -91,9 +91,14 @@ import { AccionCorrectiva, Solicitud } from '../../models/cambio.model';
   `,
   styles: `
     h2 { font-size: var(--gp-text-lg); }
-    .acciones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-    .acciones li { display: flex; align-items: center; gap: var(--gp-space-3); padding: 8px 10px; border: 1px solid var(--gp-line); border-radius: var(--gp-radius-sm); }
-    .texto { display: flex; flex-direction: column; flex: 1; min-width: 0; font-size: var(--gp-text-sm); }
+    .acciones { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--gp-line); }
+    .acciones li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gp-space-2) var(--gp-space-3); padding: 10px 0; border-bottom: 1px solid var(--gp-line); }
+    .acciones li:last-child { border-bottom: 0; }
+    .texto { display: flex; flex-direction: column; gap: 2px; flex: 1 1 14rem; min-width: 0; font-size: var(--gp-text-sm); line-height: 1.4; }
+    .desc { font-size: var(--gp-text-md); color: var(--gp-text); overflow-wrap: anywhere; }
+    .gp-acciones-fila { margin-left: auto; }
+    .vacio { gap: 8px; color: var(--gp-text-muted); font-size: var(--gp-text-sm); }
+    .vacio i { color: var(--gp-data); }
   `,
 })
 export class AccionesSolicitud {

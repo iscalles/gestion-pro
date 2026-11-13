@@ -10,15 +10,34 @@
       <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar()" />
     </div>
   } @else if (!s()) {
-    <div class="panel gp-estado-carga" aria-busy="true">
-      @for (i of [1, 2, 3, 4]; track i) {
-        <p-skeleton height="1.75rem" />
-      }
+    <div class="carga" aria-busy="true">
+      <div class="carga-cabecera">
+        <p-skeleton width="min(30rem, 100%)" height="2rem" />
+        <p-skeleton width="min(20rem, 80%)" height="1.25rem" />
+      </div>
+      <div class="panel">
+        <div class="sk-etapas">
+          @for (i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track i) {
+            <div class="sk-etapa">
+              <p-skeleton shape="circle" size="1.75rem" />
+              <p-skeleton width="70%" height="0.75rem" />
+            </div>
+          }
+        </div>
+        <div class="gp-estado-carga">
+          <p-skeleton width="12rem" height="1.25rem" />
+          <p-skeleton height="3.5rem" />
+        </div>
+      </div>
+      <div class="gp-rejilla columnas">
+        <p-skeleton height="12rem" />
+        <p-skeleton height="12rem" />
+      </div>
     </div>
   } @else {
     @let sol = s()!;
     <header class="cabecera">
-      <div>
+      <div class="cabecera-texto">
         <h1><span class="gp-codigo">{{ sol.codigo }}</span> {{ sol.titulo }}</h1>
         <p class="meta">
           <gp-status-badge [tono]="est[sol.estado].tono">{{ est[sol.estado].etiqueta }}</gp-status-badge>
@@ -36,43 +55,59 @@
       </div>
     </header>
 
-    <!-- Etapas -->
+    <!-- Etapas: completada con check, actual con anillo turquesa, futura en tinta suave.
+         El check, el relleno del conector y el anillo se insertan al cambiar de estado, así su animación
+         CSS corre justo cuando una etapa se completa (y una sola vez al cargar, escalonada). -->
     <section class="panel">
-      <ol class="etapas" aria-label="Etapas de la solicitud">
-        @for (e of sol.etapas; track e.numero) {
-          <li>
-            <button
-              type="button"
-              class="etapa"
+      <div class="etapas-marco">
+        <ol class="etapas" [class.inicial]="primeraCarga()" aria-label="Etapas de la solicitud">
+          @for (e of sol.etapas; track e.numero; let i = $index, ultima = $last) {
+            <li
+              [style.--i]="i"
               [class.completada]="e.estado === 'COMPLETADA'"
               [class.curso]="e.estado === 'EN_CURSO'"
               [class.omitida]="e.estado === 'OMITIDA'"
-              [class.sel]="e.numero === etapaSel()"
-              [attr.aria-current]="e.estado === 'EN_CURSO' ? 'step' : null"
-              [attr.aria-label]="'Etapa ' + e.numero + ', ' + e.nombre + ', ' + textoEstadoEtapa(e) + (e.vencida ? ', vencida' : '')"
-              (click)="etapaSel.set(e.numero)"
             >
-              <span class="num">
-                @if (iconoEtapa(e)) {
-                  <i [class]="iconoEtapa(e)" aria-hidden="true"></i>
-                } @else {
-                  {{ e.numero }}
-                }
-              </span>
-              <span class="nombre">{{ e.nombre }}</span>
-              @if (e.vencida) {
-                <i class="pi pi-exclamation-circle vencida" aria-hidden="true"></i>
+              @if (!ultima) {
+                <span class="conector" aria-hidden="true">
+                  @if (e.estado === 'COMPLETADA') {
+                    <span class="conector-relleno"></span>
+                  }
+                </span>
               }
-            </button>
-          </li>
-        }
-      </ol>
+              <button
+                type="button"
+                class="etapa"
+                [class.sel]="e.numero === etapaSel()"
+                [attr.aria-current]="e.estado === 'EN_CURSO' ? 'step' : null"
+                [attr.aria-label]="'Etapa ' + e.numero + ', ' + e.nombre + ', ' + textoEstadoEtapa(e) + (e.vencida ? ', vencida' : '')"
+                (click)="etapaSel.set(e.numero)"
+              >
+                <span class="num">
+                  <span class="numero">{{ e.numero }}</span>
+                  @if (e.estado === 'COMPLETADA') {
+                    <span class="disco"><i [class]="iconoEtapa(e)" aria-hidden="true"></i></span>
+                  } @else if (e.estado === 'EN_CURSO') {
+                    <span class="anillo"></span>
+                  } @else if (e.estado === 'OMITIDA') {
+                    <span class="disco-omitida"><i [class]="iconoEtapa(e)" aria-hidden="true"></i></span>
+                  }
+                </span>
+                <span class="nombre">{{ e.nombre }}</span>
+                @if (e.vencida) {
+                  <i class="pi pi-exclamation-circle vencida" aria-hidden="true"></i>
+                }
+              </button>
+            </li>
+          }
+        </ol>
+      </div>
 
       @if (etapa(); as e) {
         <div class="gp-seccion detalle-etapa">
           <div class="gp-seccion-cabecera">
             <div>
-              <h2>{{ e.numero }}. {{ e.nombre }}</h2>
+              <h2><span class="etapa-num">{{ e.numero }}.</span> {{ e.nombre }}</h2>
               @if (e.descripcion) {
                 <p>{{ e.descripcion }}</p>
               }
@@ -84,11 +119,14 @@
           <dl class="gp-ficha">
             <div><dt>Estado</dt><dd>{{ textoEstadoEtapa(e) | titlecase }}</dd></div>
             <div><dt>Responsable</dt><dd>{{ e.responsable ?? '—' }}</dd></div>
-            <div><dt>Inicio</dt><dd>{{ e.fechaInicio ? (e.fechaInicio | date: 'dd-MM-yyyy') : '—' }}</dd></div>
-            <div><dt>Término</dt><dd>{{ e.fechaFin ? (e.fechaFin | date: 'dd-MM-yyyy') : '—' }}</dd></div>
+            <div><dt>Inicio</dt><dd class="gp-tnum">{{ e.fechaInicio ? (e.fechaInicio | date: 'dd-MM-yyyy') : '—' }}</dd></div>
+            <div><dt>Término</dt><dd class="gp-tnum">{{ e.fechaFin ? (e.fechaFin | date: 'dd-MM-yyyy') : '—' }}</dd></div>
             <div>
               <dt>Fecha límite</dt>
-              <dd [class.gp-negativo]="e.vencida">
+              <dd class="gp-tnum" [class.gp-negativo]="e.vencida">
+                @if (e.vencida) {
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                }
                 {{ e.fechaLimite ? (e.fechaLimite | date: 'dd-MM-yyyy') : '—' }}
                 @if (e.vencida) {
                   (vencida)
@@ -104,23 +142,33 @@
         </div>
       }
 
+      <!-- Bloque de decisión / avance de etapa -->
       @if (enCurso()) {
         <div class="gp-seccion flujo">
           @if (sol.etapaActual === 4) {
             @if (esAdmin()) {
-              <p>La solicitud espera la decisión. Al aprobarla se guarda una línea base, se aplican las {{ sol.modificaciones.length }} modificaciones y se recalculan fechas, costos, KPI y alertas.</p>
-              <div class="gp-acciones-fila">
+              <div class="flujo-texto">
+                <i class="pi pi-flag flujo-icono" aria-hidden="true"></i>
+                <p>La solicitud espera la decisión. Al aprobarla se guarda una línea base, se aplican las <strong class="gp-tnum">{{ sol.modificaciones.length }}</strong> modificaciones y se recalculan fechas, costos, KPI y alertas.</p>
+              </div>
+              <div class="gp-acciones-fila decision">
                 <p-button label="Rechazar" icon="pi pi-times" severity="danger" [outlined]="true" (onClick)="abrirDecision('rechazar')" />
                 <p-button label="Aprobar y aplicar" icon="pi pi-check" (onClick)="abrirDecision('aprobar')" />
               </div>
             } @else {
-              <p><i class="pi pi-lock" aria-hidden="true"></i> La aprobación o el rechazo los decide el administrador.</p>
+              <p class="flujo-texto bloqueo"><i class="pi pi-lock" aria-hidden="true"></i> La aprobación o el rechazo los decide el administrador.</p>
             }
           } @else if (sol.etapaActual === 10) {
-            <p>Última etapa: registra el resultado, la efectividad y el costo real para cerrar la solicitud.</p>
+            <div class="flujo-texto">
+              <i class="pi pi-flag-fill flujo-icono" aria-hidden="true"></i>
+              <p>Última etapa: registra el resultado, la efectividad y el costo real para cerrar la solicitud.</p>
+            </div>
             <p-button label="Cerrar solicitud" icon="pi pi-check-square" (onClick)="abrirCierre()" />
           } @else if (siguiente(); as sig) {
-            <p>Etapa {{ sol.etapaActual }} en curso. Al completarla se abre «{{ sig.nombre }}».</p>
+            <div class="flujo-texto">
+              <i class="pi pi-arrow-circle-right flujo-icono" aria-hidden="true"></i>
+              <p>Etapa {{ sol.etapaActual }} en curso. Al completarla se abre «{{ sig.nombre }}».</p>
+            </div>
             <p-button [label]="'Completar y pasar a ' + sig.numero" icon="pi pi-arrow-right" iconPos="right" (onClick)="abrirDecision('avanzar')" />
           }
         </div>
@@ -137,17 +185,19 @@
             <h3>Justificación</h3>
             <p class="gp-texto-largo">{{ sol.justificacion }}</p>
           }
-          <dl class="gp-ficha ficha">
+        </div>
+        <div class="gp-seccion">
+          <dl class="gp-ficha">
             <div><dt>Responsable</dt><dd>{{ sol.responsable }}</dd></div>
             <div>
               <dt>Fecha comprometida</dt>
-              <dd [class.gp-negativo]="sol.atrasada">{{ sol.fechaComprometida | date: 'dd-MM-yyyy' }}{{ sol.atrasada ? ' (atrasada)' : '' }}</dd>
+              <dd class="gp-tnum" [class.gp-negativo]="sol.atrasada">{{ sol.fechaComprometida | date: 'dd-MM-yyyy' }}{{ sol.atrasada ? ' (atrasada)' : '' }}</dd>
             </div>
-            <div><dt>Fecha real</dt><dd>{{ sol.fechaReal ? (sol.fechaReal | date: 'dd-MM-yyyy') : '—' }}</dd></div>
-            <div><dt>Costo estimado</dt><dd>{{ sol.costoEstimado | clp }}</dd></div>
-            <div><dt>Costo real</dt><dd>{{ sol.costoReal == null ? '—' : (sol.costoReal | clp) }}</dd></div>
+            <div><dt>Fecha real</dt><dd class="gp-tnum">{{ sol.fechaReal ? (sol.fechaReal | date: 'dd-MM-yyyy') : '—' }}</dd></div>
+            <div><dt>Costo estimado</dt><dd class="gp-tnum">{{ sol.costoEstimado | clp }}</dd></div>
+            <div><dt>Costo real</dt><dd class="gp-tnum">{{ sol.costoReal == null ? '—' : (sol.costoReal | clp) }}</dd></div>
             @if (sol.aprobadoPor) {
-              <div><dt>Decidida por</dt><dd>{{ sol.aprobadoPor }} · {{ sol.fechaDecision | date: 'dd-MM-yyyy' }}</dd></div>
+              <div><dt>Decidida por</dt><dd>{{ sol.aprobadoPor }} · <span class="gp-tnum">{{ sol.fechaDecision | date: 'dd-MM-yyyy' }}</span></dd></div>
             }
           </dl>
         </div>
@@ -158,13 +208,19 @@
         <div class="gp-seccion">
           <h2 class="titulo">Impacto y riesgo</h2>
           <dl class="gp-ficha">
-            <div><dt>Plazo estimado</dt><dd>{{ sol.impactoPlazoDias > 0 ? '+' : '' }}{{ sol.impactoPlazoDias }} días hábiles</dd></div>
-            <div><dt>Costo estimado</dt><dd>{{ sol.impactoCosto | clp }}</dd></div>
+            <div>
+              <dt>Plazo estimado</dt>
+              <dd class="cifra-ficha">{{ sol.impactoPlazoDias > 0 ? '+' : '' }}{{ sol.impactoPlazoDias }} <span class="gp-unidad">días hábiles</span></dd>
+            </div>
+            <div><dt>Costo estimado</dt><dd class="cifra-ficha">{{ sol.impactoCosto | clp }}</dd></div>
             @if (sol.impactoPlazoReal != null) {
-              <div><dt>Plazo real</dt><dd [class.gp-negativo]="sol.impactoPlazoReal > 0">{{ sol.impactoPlazoReal > 0 ? '+' : '' }}{{ sol.impactoPlazoReal }} días hábiles</dd></div>
+              <div>
+                <dt>Plazo real</dt>
+                <dd class="cifra-ficha" [class.gp-negativo]="sol.impactoPlazoReal > 0">{{ sol.impactoPlazoReal > 0 ? '+' : '' }}{{ sol.impactoPlazoReal }} <span class="gp-unidad">días hábiles</span></dd>
+              </div>
             }
             @if (sol.impactoCostoReal != null) {
-              <div><dt>Costo real del plan</dt><dd [class.gp-negativo]="sol.impactoCostoReal > 0">{{ sol.impactoCostoReal | clp }}</dd></div>
+              <div><dt>Costo real del plan</dt><dd class="cifra-ficha" [class.gp-negativo]="sol.impactoCostoReal > 0">{{ sol.impactoCostoReal | clp }}</dd></div>
             }
             @if (sol.impactoRecursos) {
               <div class="ancho"><dt>Recursos</dt><dd>{{ sol.impactoRecursos }}</dd></div>
@@ -237,8 +293,8 @@
           <h2 class="titulo">Resultado</h2>
           <p class="gp-texto-largo">{{ sol.resultado }}</p>
           <dl class="gp-ficha ficha">
-            <div><dt>Efectividad</dt><dd>{{ sol.efectividad == null ? '—' : (sol.efectividad | number: '1.0-1') + ' %' }}</dd></div>
-            <div><dt>Adopción</dt><dd>{{ sol.adopcion == null ? '—' : (sol.adopcion | number: '1.0-1') + ' %' }}</dd></div>
+            <div><dt>Efectividad</dt><dd class="cifra-ficha">{{ sol.efectividad == null ? '—' : (sol.efectividad | number: '1.0-1') + ' %' }}</dd></div>
+            <div><dt>Adopción</dt><dd class="cifra-ficha">{{ sol.adopcion == null ? '—' : (sol.adopcion | number: '1.0-1') + ' %' }}</dd></div>
           </dl>
         </div>
       </section>
@@ -297,38 +353,20 @@
   </ng-template>
 </p-dialog>
 
-<!-- Resultado de la aprobación -->
+<!-- Resultado de la aprobación: el momento clave.
+     El diálogo entra en 320 ms (gp-destacar); luego las filas antes→después (cada 50 ms) y los KPI afectados
+     (cada 40 ms), todo terminado antes de 500 ms. Con movimiento reducido, todo aparece con un fundido. -->
 <p-dialog
   header="Cambio aprobado y aplicado"
   [visible]="aprobacion() !== null"
   (visibleChange)="!$event && aprobacion.set(null)"
   [modal]="true"
   [draggable]="false"
+  styleClass="gp-dlg-aprobado"
   [style]="{ width: 'min(760px, calc(100vw - 32px))' }"
 >
-  @if (aprobacion(); as a) {
-    <dl class="gp-cifras">
-      <div class="gp-cifra">
-        <dt>Término del proyecto</dt>
-        <dd>{{ a.terminoDespues ? (a.terminoDespues | date: 'dd-MM-yyyy') : '—' }}</dd>
-        <span class="gp-cifra-nota" [class.gp-negativo]="a.diasHabilesDesplazados > 0">
-          Antes {{ a.terminoAntes ? (a.terminoAntes | date: 'dd-MM-yyyy') : '—' }}
-          ({{ a.diasHabilesDesplazados > 0 ? '+' : '' }}{{ a.diasHabilesDesplazados }} días hábiles)
-        </span>
-      </div>
-      <div class="gp-cifra">
-        <dt>Costo planificado</dt>
-        <dd>{{ a.costoDespues | clp }}</dd>
-        <span class="gp-cifra-nota" [class.gp-negativo]="a.costoDespues > a.costoAntes">Antes {{ a.costoAntes | clp }}</span>
-      </div>
-      <div class="gp-cifra">
-        <dt>Actividades reprogramadas</dt>
-        <dd>{{ a.recalculadas.length }}</dd>
-        <span class="gp-cifra-nota">Línea base {{ a.lineaBase }}</span>
-      </div>
-    </dl>
-    <h3 class="sub">KPI afectados ({{ a.kpiAfectados.length }})</h3>
-    <gp-kpi-afectados [items]="a.kpiAfectados" />
+  @if (aprobacionVista(); as a) {
+    <gp-resultado-aprobacion [aprobacion]="a" />
   }
   <ng-template #footer>
     <div class="gp-pie-dialogo">

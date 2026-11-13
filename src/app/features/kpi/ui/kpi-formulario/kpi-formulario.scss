@@ -1,54 +1,132 @@
+// Banco de prueba de la fórmula: escribir, insertar variables y probar con los datos de hoy.
+.banco {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gp-space-2);
+  padding: var(--gp-space-3);
+  border: 1px solid var(--gp-line);
+  border-radius: var(--gp-radius-lg);
+  background: var(--gp-canvas);
+}
+
 .formula {
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: var(--gp-text-sm);
+  background: var(--gp-surface);
+}
+
+.variables .gp-chip {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  border-radius: var(--gp-radius-sm);
+  transition:
+    border-color var(--gp-dur-fast) var(--gp-ease-out),
+    color var(--gp-dur-fast) var(--gp-ease-out);
+
+  &:focus-visible {
+    box-shadow: var(--gp-focus);
+    outline: none;
+  }
 }
 
 .prueba {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--gp-space-3);
-  margin-top: var(--gp-space-2);
+  gap: var(--gp-space-2) var(--gp-space-4);
+  padding-top: var(--gp-space-2);
+  border-top: 1px solid var(--gp-line);
 }
 
 .resultado {
-  font-size: var(--gp-text-sm);
-}
-
-.valores {
-  margin: var(--gp-space-2) 0 0;
-  padding-left: var(--gp-space-4);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
   font-size: var(--gp-text-sm);
   color: var(--gp-text-muted);
 
+  strong {
+    font-size: var(--gp-text-xl);
+    color: var(--gp-text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+}
+
+.valores {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
+
+  li {
+    display: grid;
+    grid-template-columns: 10rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--gp-space-3);
+  }
+
   code {
+    color: var(--gp-text);
+    font-size: var(--gp-text-xs);
+  }
+
+  .dato {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  strong {
     color: var(--gp-text);
   }
 }
 
+// Umbrales del semáforo: una fila por estado, siempre con ícono y texto
 .umbrales {
-  border: 1px solid var(--gp-line);
-  border-radius: var(--gp-radius-md);
-  padding: var(--gp-space-3);
-  margin: 0;
   display: flex;
   flex-direction: column;
   gap: var(--gp-space-2);
+  margin: 0;
+  padding: var(--gp-space-3) var(--gp-space-4) var(--gp-space-4);
+  border: 1px solid var(--gp-line);
+  border-radius: var(--gp-radius-lg);
 
   legend {
+    padding: 0 6px;
     font-size: var(--gp-text-sm);
     font-weight: 500;
-    padding: 0 4px;
   }
 
   .fila {
     display: grid;
-    grid-template-columns: 120px 1fr 1fr;
+    grid-template-columns: 8.5rem 1fr 1fr;
     align-items: center;
-    gap: var(--gp-space-2);
+    gap: var(--gp-space-3);
+
+    @media (max-width: 560px) {
+      grid-template-columns: 1fr 1fr;
+
+      .nombre {
+        grid-column: 1 / -1;
+      }
+    }
   }
 
   .nombre {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: var(--gp-text-sm);
+    font-weight: 500;
+  }
+
+  :host ::ng-deep & .p-inputnumber,
+  :host ::ng-deep & .p-inputnumber input {
+    width: 100%;
   }
 
   p {

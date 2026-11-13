@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
 import { DatePipe, DecimalPipe, LowerCasePipe, TitleCasePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -21,6 +21,7 @@ import { Evidencias } from '../../../../shared/ui/evidencias/evidencias';
 import { ClpPipe } from '../../../../shared/pipes/clp.pipe';
 import { contextoProyecto } from '../../../../shared/util/contexto-proyecto';
 import { hoyIso } from '../../../../shared/util/formato';
+import { DURACION } from '../../../../shared/ui/movimiento/movimiento';
 import { mensajeDeError } from '../../../../core/api/api-error';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { UsuariosService } from '../../../../core/api/usuarios.service';
@@ -33,6 +34,7 @@ import { SolicitudFormulario } from '../../ui/solicitud-formulario/solicitud-for
 import { ModificacionesSolicitud } from '../../ui/modificaciones-solicitud/modificaciones-solicitud';
 import { AccionesSolicitud } from '../../ui/acciones-solicitud/acciones-solicitud';
 import { KpiAfectados } from '../../ui/kpi-afectados/kpi-afectados';
+import { ResultadoAprobacion } from '../../ui/resultado-aprobacion/resultado-aprobacion';
 
 type Decision = 'avanzar' | 'aprobar' | 'rechazar';
 
@@ -41,7 +43,7 @@ type Decision = 'avanzar' | 'aprobar' | 'rechazar';
   imports: [
     DatePipe, DecimalPipe, LowerCasePipe, TitleCasePipe, RouterLink, FormsModule, ButtonModule, DialogModule, InputNumberModule, InputTextModule,
     MessageModule, SelectModule, SkeletonModule, TextareaModule, ToastModule, ConfirmDialogModule, TooltipModule,
-    StatusBadge, Evidencias, ClpPipe, SolicitudFormulario, ModificacionesSolicitud, AccionesSolicitud, KpiAfectados,
+    StatusBadge, Evidencias, ClpPipe, SolicitudFormulario, ModificacionesSolicitud, AccionesSolicitud, KpiAfectados, ResultadoAprobacion,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './cambio-detalle.html',
@@ -60,6 +62,11 @@ export class CambioDetalle {
   protected readonly error = signal<string | null>(null);
   protected readonly etapaSel = signal<number | null>(null);
   protected readonly usuarios = signal<{ label: string; value: number }[]>([]);
+  /**
+   * Visual: el stepper se dibuja escalonado de izquierda a derecha solo la primera vez que se ve la solicitud.
+   * Después, cada check, conector o anillo nuevo (tras «Completar y pasar» o al aprobar) anima por sí solo.
+   */
+  protected readonly primeraCarga = signal(true);
 
   protected readonly est = ESTADO_SOLICITUD;
   protected readonly pri = PRIORIDAD;
@@ -73,6 +80,11 @@ export class CambioDetalle {
       const pid = this.ctx.proyectoId();
       const id = this.id();
       if (pid != null && id) untracked(() => this.cargar());
+    });
+    effect((onCleanup) => {
+      if (!this.s() || !this.primeraCarga()) return;
+      const t = setTimeout(() => this.primeraCarga.set(false), DURACION.dibujo + 100);
+      onCleanup(() => clearTimeout(t));
     });
     inject(UsuariosService)
       .listar()
@@ -134,6 +146,11 @@ export class CambioDetalle {
   protected readonly procesando = signal(false);
   protected readonly errorDecision = signal<string | null>(null);
   protected readonly aprobacion = signal<Aprobacion | null>(null);
+  /** Visual: conserva el contenido del diálogo mientras sale, para que no se vacíe durante su animación de cierre. */
+  protected readonly aprobacionVista = linkedSignal<Aprobacion | null, Aprobacion | null>({
+    source: () => this.aprobacion(),
+    computation: (a, previo) => a ?? previo?.value ?? null,
+  });
 
   protected abrirDecision(d: Decision): void {
     this.observacion = '';

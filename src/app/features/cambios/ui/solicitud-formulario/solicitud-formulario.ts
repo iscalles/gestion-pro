@@ -21,6 +21,28 @@ import { StatusBadge } from '../../../../shared/ui/status-badge/status-badge';
   selector: 'gp-solicitud-formulario',
   imports: [FormsModule, ButtonModule, DialogModule, InputNumberModule, InputTextModule, MessageModule, SelectModule, TextareaModule, StatusBadge],
   templateUrl: './solicitud-formulario.html',
+  styles: `
+    .grupo {
+      margin: 0;
+      padding: var(--gp-space-3) var(--gp-space-4) var(--gp-space-4);
+      border: 1px solid var(--gp-line);
+      border-radius: var(--gp-radius-lg);
+    }
+    legend {
+      padding: 0 6px;
+      font-size: var(--gp-text-sm);
+      font-weight: 700;
+    }
+    .nivel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      font-size: var(--gp-text-sm);
+      color: var(--gp-text-muted);
+    }
+  `,
 })
 export class SolicitudFormulario {
   readonly proyectoId = input.required<number>();
