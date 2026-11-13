@@ -1,8 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { ROL_ETIQUETA } from '../../auth/auth.models';
 import { MENU } from '../navegacion';
+import { animarIndicadoresDePestanas } from '../../../shared/ui/movimiento/indicador-pestanas';
 
 @Component({
   selector: 'gp-shell',
@@ -32,6 +33,12 @@ export class Shell {
       (g) => g.items.length > 0,
     ),
   );
+
+  constructor() {
+    // Visual: el indicador de pestañas de toda la app se desliza con transform.
+    const destroy = inject(DestroyRef);
+    afterNextRender(() => destroy.onDestroy(animarIndicadoresDePestanas(document.body)));
+  }
 
   protected alternarMenu(): void {
     this.menuAbierto.update((v) => !v);

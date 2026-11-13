@@ -1,4 +1,5 @@
 @use './styles/tokens';
+@use './styles/movimiento';
 @use './styles/pantallas';
 
 *,
@@ -20,6 +21,14 @@ body {
   font-size: var(--gp-text-md);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  caret-color: var(--gp-accent);
+  scrollbar-color: var(--gp-line-strong) transparent;
+}
+
+::selection {
+  background: var(--gp-accent-wash);
+  color: var(--gp-text);
 }
 
 h1,
@@ -28,10 +37,14 @@ h3 {
   margin: 0;
   line-height: 1.25;
   font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 a {
   color: var(--gp-accent);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
 }
 a:hover {
   color: var(--gp-accent-hover);
@@ -42,18 +55,37 @@ a:hover {
   box-shadow: var(--gp-focus);
 }
 
+// Cifras tabulares donde se comparan números: tablas, fichas, campos y gráficos
+td,
+th,
+dd,
+input,
+time,
+svg text,
+.num,
+.gp-tnum {
+  font-variant-numeric: tabular-nums;
+}
+
 // Montos y porcentajes: alineados a la derecha
 .num {
   text-align: right;
   white-space: nowrap;
 }
 
-// Panel L1: toda tabla o formulario vive dentro de uno
+// Unidad junto al valor: más pequeña y en tinta secundaria («45,15 %», «13 días»)
+.gp-unidad {
+  font-size: 0.62em;
+  font-weight: 500;
+  color: var(--gp-text-muted);
+  letter-spacing: 0;
+}
+
+// Panel: superficie blanca con línea fina, sin sombra en reposo
 .panel {
   background: var(--gp-surface);
   border: 1px solid var(--gp-line);
-  border-radius: var(--gp-radius-md);
-  box-shadow: var(--gp-shadow-soft);
+  border-radius: var(--gp-radius-lg);
 }
 
 .sr-only {
@@ -65,18 +97,15 @@ a:hover {
   white-space: nowrap;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 // Campos de PrimeNG con el mismo tamaño de cuerpo que el resto de la app
 .p-inputtext,
 .p-select-label,
 .p-password-input {
   font-size: var(--gp-text-md);
+}
+
+// Encabezados de diálogo con la misma voz que los títulos de sección
+.p-dialog-title,
+.p-drawer-title {
+  letter-spacing: -0.01em;
 }

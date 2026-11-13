@@ -9,14 +9,17 @@ export const SERIE = {
   real: '#8059C9',
 } as const;
 
-/** Rampa secuencial de un solo tono (turquesa de la marca) para magnitudes: claro → oscuro. */
-export const RAMPA = ['#eef6f6', '#cfe6e7', '#a9c8c9', '#7fadaf', '#609496', '#2c6163'];
+/**
+ * Rampa secuencial de un solo tono (turquesa de la marca) para magnitudes: claro → oscuro.
+ * Es la misma rampa que --gp-rampa-1..6. Tinta legible sobre los pasos 1-5 (≥5:1) y blanco sobre el 6 (6,08:1).
+ */
+export const RAMPA = ['#eef6f5', '#cfe8e5', '#a3d3ce', '#72bab4', '#4aa39d', '#0b6e6a'];
 
 export const ESTADO = {
   ok: '#1f6b3a',
   warn: '#8a5300',
   danger: '#a3231b',
-  neutral: '#a9c8c9',
+  neutral: '#b9c7c6',
 } as const;
 
 /** Paso de la rampa para un valor entre 0 y 1. */
@@ -27,7 +30,7 @@ export function paso(fraccion: number): string {
 
 /** Texto legible sobre un paso de la rampa. */
 export function tintaSobre(color: string): string {
-  return RAMPA.indexOf(color) >= 4 ? '#ffffff' : '#0c3133';
+  return RAMPA.indexOf(color) >= 5 ? '#ffffff' : '#0f2a2b';
 }
 
 /**

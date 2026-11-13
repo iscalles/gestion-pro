@@ -1,0 +1,407 @@
+// Sistema de movimiento de Gestión Pro.
+// Reglas: curva ease-out fuerte (nunca ease-in), solo transform y opacity, interacciones ≤200 ms,
+// momentos expresivos ≤500 ms. Con movimiento reducido cada animación pasa a un fundido corto.
+//
+// Frecuencia → decisión:
+//  · uso continuo (hover de filas, menú, resaltado de dependencias, teclado): sin animación;
+//  · frecuente (rutas, pestañas, menús, tooltips, botones): ≤200 ms;
+//  · ocasional (panel de detalle, diálogos, toasts, árbol, stepper): ≤200 ms, salida más rápida;
+//  · primera carga (Gantt, tableros, login): ≤500 ms, una sola vez por visita.
+
+@keyframes gp-aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes gp-desaparecer {
+  to {
+    opacity: 0;
+  }
+}
+
+// Entrada de pantalla y de secciones: sube 6 px
+@keyframes gp-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+// Hijos que aparecen al expandir un árbol: bajan desde su padre
+@keyframes gp-desplegar-fila {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+// El tiempo se dibuja de izquierda a derecha (barras, conectores, avance)
+@keyframes gp-desplegar-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+// Magnitudes: crecen desde su base
+@keyframes gp-crecer-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+// Celdas de matriz y heatmap
+@keyframes gp-celda {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+// Diálogos
+@keyframes gp-emerger {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes gp-emerger-salir {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+// «Cambio aprobado y aplicado»: entrada enfatizada
+@keyframes gp-destacar {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+
+// Panel lateral de detalle
+@keyframes gp-panel-entrar {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes gp-panel-salir {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+// Menús desplegables, selects, calendarios
+@keyframes gp-menu-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+// Toasts
+@keyframes gp-toast-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+
+@keyframes gp-toast-salir {
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+// Check de etapa completada
+@keyframes gp-check {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+// Skeleton: respira, no brilla
+@keyframes gp-pulso {
+  to {
+    opacity: 0.5;
+  }
+}
+
+// Valor recalculado: un lavado turquesa que se apaga solo
+@keyframes gp-resaltar {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Entrada de pantalla: la vista que pone el router aparece, y sus secciones suben escalonadas.
+// No toca el router: la vista es el elemento que Angular inserta junto al <router-outlet>.
+
+.gp-contenido > router-outlet + * {
+  display: block;
+  animation: gp-aparecer var(--gp-dur-fast) var(--gp-ease-out) both;
+}
+
+.gp-pagina > * {
+  animation: gp-entrar var(--gp-dur-base) var(--gp-ease-out) both;
+
+  @for $i from 2 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: calc(var(--gp-stagger) * #{$i - 1});
+    }
+  }
+
+  &:nth-child(n + 6) {
+    animation-delay: calc(var(--gp-stagger) * 5);
+  }
+}
+
+// Utilidades para que cada módulo use la misma gramática
+.gp-anim-entrar {
+  animation: gp-entrar var(--gp-dur-base) var(--gp-ease-out) both;
+}
+
+.gp-anim-aparecer {
+  animation: gp-aparecer var(--gp-dur-base) var(--gp-ease-out) both;
+}
+
+.gp-anim-fila {
+  animation: gp-desplegar-fila var(--gp-dur-fast) var(--gp-ease-out) both;
+}
+
+.gp-anim-desplegar-x {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: gp-desplegar-x var(--gp-dur-dibujo) var(--gp-ease-out) both;
+}
+
+.gp-anim-crecer-y {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: gp-crecer-y var(--gp-dur-dibujo) var(--gp-ease-out) both;
+}
+
+.gp-anim-celda {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gp-celda var(--gp-dur-dibujo) var(--gp-ease-out) both;
+}
+
+// Resaltado de valores recalculados (lo activa la directiva gpResaltar)
+.gp-resaltado {
+  position: relative;
+  isolation: isolate;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -2px -6px;
+    z-index: -1;
+    border-radius: var(--gp-radius-sm);
+    background: var(--gp-accent-wash);
+    opacity: 0;
+    pointer-events: none;
+    animation: gp-resaltar 1600ms var(--gp-ease-out) both;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Componentes de PrimeNG: misma curva y duraciones. Se usa `body` para ganar a los estilos que
+// PrimeNG inyecta en tiempo de ejecución.
+
+body {
+  // Botones: respuesta al presionar
+  .p-button {
+    transition:
+      background-color var(--gp-dur-fast) var(--gp-ease-out),
+      border-color var(--gp-dur-fast) var(--gp-ease-out),
+      color var(--gp-dur-fast) var(--gp-ease-out),
+      box-shadow var(--gp-dur-fast) var(--gp-ease-out),
+      transform var(--gp-dur-press) var(--gp-ease-out);
+
+    &:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+  }
+
+  // Selects, calendarios, menús emergentes
+  .p-anchored-overlay-enter-active {
+    animation: gp-menu-entrar var(--gp-dur-fast) var(--gp-ease-out);
+  }
+
+  .p-anchored-overlay-leave-active {
+    animation: gp-desaparecer var(--gp-dur-exit) var(--gp-ease-out);
+  }
+
+  // Diálogos
+  .p-dialog-enter-active {
+    animation: gp-emerger var(--gp-dur-base) var(--gp-ease-out);
+  }
+
+  .p-dialog-leave-active {
+    animation: gp-emerger-salir var(--gp-dur-exit) var(--gp-ease-out);
+  }
+
+  // Panel lateral (drawer) desde la derecha
+  .p-drawer-right .p-drawer-enter-active {
+    animation: gp-panel-entrar var(--gp-dur-base) var(--gp-ease-drawer);
+  }
+
+  .p-drawer-right .p-drawer-leave-active {
+    animation: gp-panel-salir var(--gp-dur-exit) var(--gp-ease-out);
+  }
+
+  // Toasts
+  .p-toast-message-enter-active {
+    animation: gp-toast-entrar var(--gp-dur-base) var(--gp-ease-out);
+  }
+
+  .p-toast-message-leave-active {
+    animation: gp-toast-salir var(--gp-dur-exit) var(--gp-ease-out);
+  }
+
+  // Contenido de pestañas: fundido al activarse (una animación CSS se reinicia al volver a mostrarse)
+  .p-tabpanel {
+    animation: gp-aparecer var(--gp-dur-fast) var(--gp-ease-out);
+  }
+
+  // Indicador de pestañas: PrimeNG calcula left/width; la directiva los traduce a transform
+  .p-tablist-active-bar.gp-indicador {
+    left: 0 !important;
+    width: 100px !important;
+    transform-origin: left center;
+    transition: transform var(--gp-dur-base) var(--gp-ease-out);
+  }
+
+  // Skeleton: pulso de opacidad en lugar del brillo que se desliza
+  .p-skeleton {
+    animation: gp-pulso 800ms var(--gp-ease-out) infinite alternate;
+
+    &::after {
+      display: none;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Movimiento reducido: las mismas animaciones pasan a ser fundidos breves (sin desplazamiento ni
+// escala). Las directivas de conteo y de dibujo muestran directamente el estado final.
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes gp-entrar {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-desplegar-fila {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-desplegar-x {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-crecer-y {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-celda {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-emerger {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-emerger-salir {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-destacar {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-panel-entrar {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-panel-salir {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-menu-entrar {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-toast-entrar {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-toast-salir {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gp-check {
+    from {
+      opacity: 0;
+    }
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  body {
+    .p-button:active:not(:disabled) {
+      transform: none;
+    }
+
+    .p-skeleton {
+      animation: none;
+    }
+
+    .p-tablist-active-bar.gp-indicador {
+      transition-duration: 0ms;
+    }
+  }
+}
