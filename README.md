@@ -2,6 +2,7 @@
 
 Frontend del proyecto integrador de Gestión de Proyectos de Software (Duoc UC): proyectos, EDT y planificación, Carta Gantt, recursos y costos, hitos, KPI, gestión del cambio y dos tableros de comando.
 
+- [Características](docs/caracteristicas.md): todo lo que hace el sistema, pantalla por pantalla.
 - [Documentación técnica](docs/documentacion-tecnica.md): requerimientos, modelo de datos, arquitectura, reglas de cálculo y justificación de los KPI.
 - [Guion de la demostración](docs/guion-demostracion.md): el caso de prueba paso a paso, con los efectos esperados.
 - Backend: [iscalles/gestion-pro-backend](https://github.com/iscalles/gestion-pro-backend).
