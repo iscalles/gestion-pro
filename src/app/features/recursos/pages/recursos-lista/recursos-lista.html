@@ -1,6 +1,17 @@
 <p-toast position="bottom-right" />
 <p-confirmdialog [style]="{ width: 'min(460px, calc(100vw - 32px))' }" />
 
+<!-- Monto con el «$» como unidad: el texto sale tal cual del pipe clp, solo se separa el símbolo. -->
+<ng-template #monto let-v>
+  @let t = v | clp;
+  @let i = t.indexOf('$');
+  @if (i >= 0) {
+    {{ t.slice(0, i) }}<span class="gp-unidad pesos">$</span>{{ t.slice(i + 1) }}
+  } @else {
+    {{ t }}
+  }
+</ng-template>
+
 <div class="gp-pagina">
   <gp-page-header
     titulo="Recursos y costos"
@@ -18,9 +29,11 @@
   } @else if (ctx.proyectos().length === 0) {
     <div class="panel gp-vacio">
       @if (ctx.error(); as e) {
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
         <p-message severity="error" [text]="e" />
         <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="ctx.recargar()" />
       } @else {
+        <i class="pi pi-folder-open" aria-hidden="true"></i>
         <p>Todavía no tienes proyectos asignados.</p>
       }
     </div>
@@ -30,70 +43,104 @@
     </div>
 
     @if (error(); as e) {
-      <div class="panel gp-estado-carga">
+      <div class="panel gp-estado-carga" role="alert">
         <p-message severity="error" [text]="e" />
         <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar(ctx.proyectoId()!)" />
       </div>
     } @else if (!costos()) {
-      <div class="panel gp-estado-carga" aria-busy="true">
-        @for (i of [1, 2, 3, 4]; track i) {
-          <p-skeleton height="1.75rem" />
-        }
+      <div class="esqueleto" aria-busy="true">
+        <div class="gp-cifras">
+          @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+            <div class="gp-cifra">
+              <p-skeleton width="55%" height="0.875rem" />
+              <p-skeleton width="80%" height="1.75rem" />
+            </div>
+          }
+        </div>
+        <div class="panel gp-estado-carga">
+          <p-skeleton width="70%" height="2.25rem" />
+          @for (i of [1, 2, 3, 4]; track i) {
+            <p-skeleton height="1.75rem" />
+          }
+        </div>
       </div>
     } @else {
       @let c = costos()!;
-      <dl class="gp-cifras">
-        <div class="gp-cifra">
-          <dt>Presupuesto</dt>
-          <dd>{{ c.presupuesto | clp }}</dd>
-        </div>
-        <div class="gp-cifra">
-          <dt>Costo planificado</dt>
-          <dd>{{ c.costoPlan | clp }}</dd>
-          <span class="gp-cifra-nota" [class.gp-negativo]="c.costoPlan > c.presupuesto">
-            {{ usoPresupuesto(c) | number: '1.0-1' }} % del presupuesto
-          </span>
-        </div>
-        <div class="gp-cifra">
-          <dt>Costo real a la fecha</dt>
-          <dd>{{ c.costoReal | clp }}</dd>
-        </div>
-        <div class="gp-cifra">
-          <dt>Valor ganado (EV)</dt>
-          <dd>{{ c.valorGanado | clp }}</dd>
-          <span class="gp-cifra-nota">Planificado a hoy (PV): {{ c.valorPlanificado | clp }}</span>
-        </div>
-        <div class="gp-cifra">
-          <dt>SPI · CPI</dt>
-          <dd>
-            <span [class.gp-negativo]="c.spi != null && c.spi < 0.95">{{ c.spi == null ? '—' : (c.spi | number: '1.2-2') }}</span>
-            ·
-            <span [class.gp-negativo]="c.cpi != null && c.cpi < 0.95">{{ c.cpi == null ? '—' : (c.cpi | number: '1.2-2') }}</span>
-          </dd>
-          <span class="gp-cifra-nota">Bajo 1: atraso o sobrecosto</span>
-        </div>
-        <div class="gp-cifra">
-          <dt>Sobreasignación</dt>
-          <dd [class.gp-negativo]="avisos().profesionalesSobre > 0">
-            @if (avisos().profesionalesSobre > 0) {
-              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-            }
-            {{ avisos().profesionalesSobre }} {{ avisos().profesionalesSobre === 1 ? 'profesional' : 'profesionales' }}
-          </dd>
-          <span class="gp-cifra-nota">{{ avisos().sobre }} semanas con exceso de horas</span>
-        </div>
-      </dl>
+      <!-- Se vuelve a crear al cambiar de proyecto: el resaltado queda solo para los recálculos. -->
+      @for (k of [c.proyectoId]; track k) {
+        <dl class="gp-cifras cifras" [class.recargando]="cargando()" [attr.aria-busy]="cargando()">
+          <div class="gp-cifra">
+            <dt>Presupuesto</dt>
+            <dd><span gpResaltar><ng-container *ngTemplateOutlet="monto; context: { $implicit: c.presupuesto }" /></span></dd>
+          </div>
+          <div class="gp-cifra">
+            <dt>Costo planificado</dt>
+            <dd><span gpResaltar><ng-container *ngTemplateOutlet="monto; context: { $implicit: c.costoPlan }" /></span></dd>
+            <span class="gp-cifra-nota" [class.gp-negativo]="c.costoPlan > c.presupuesto">
+              @if (c.costoPlan > c.presupuesto) {
+                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+              }
+              <span gpResaltar>{{ usoPresupuesto(c) | number: '1.0-1' }} % del presupuesto</span>
+            </span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Costo real a la fecha</dt>
+            <dd><span gpResaltar><ng-container *ngTemplateOutlet="monto; context: { $implicit: c.costoReal }" /></span></dd>
+          </div>
+          <div class="gp-cifra">
+            <dt>Valor ganado (EV)</dt>
+            <dd><span gpResaltar><ng-container *ngTemplateOutlet="monto; context: { $implicit: c.valorGanado }" /></span></dd>
+            <span class="gp-cifra-nota">Planificado a hoy (PV): <span class="gp-tnum">{{ c.valorPlanificado | clp }}</span></span>
+          </div>
+          <div class="gp-cifra">
+            <dt>SPI · CPI</dt>
+            <dd class="indices">
+              <span gpResaltar [class.gp-negativo]="c.spi != null && c.spi < 0.95">
+                @if (c.spi != null && c.spi < 0.95) {
+                  <i class="pi pi-arrow-down" aria-hidden="true"></i>
+                }
+                {{ c.spi == null ? '—' : (c.spi | number: '1.2-2') }}
+              </span>
+              <span class="sep">·</span>
+              <span gpResaltar [class.gp-negativo]="c.cpi != null && c.cpi < 0.95">
+                @if (c.cpi != null && c.cpi < 0.95) {
+                  <i class="pi pi-arrow-down" aria-hidden="true"></i>
+                }
+                {{ c.cpi == null ? '—' : (c.cpi | number: '1.2-2') }}
+              </span>
+            </dd>
+            <span class="gp-cifra-nota">Bajo 1: atraso o sobrecosto</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>Sobreasignación</dt>
+            <dd [class.gp-negativo]="avisos().profesionalesSobre > 0">
+              <span gpResaltar>
+                @if (avisos().profesionalesSobre > 0) {
+                  <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                }
+                {{ avisos().profesionalesSobre }}
+                <span class="gp-unidad">{{ avisos().profesionalesSobre === 1 ? 'profesional' : 'profesionales' }}</span>
+              </span>
+            </dd>
+            <span class="gp-cifra-nota">{{ avisos().sobre }} semanas con exceso de horas</span>
+          </div>
+        </dl>
+      }
 
-      <div class="panel">
-        <p-tabs [value]="pestana()" (valueChange)="pestana.set($event)" styleClass="gp-pestanas" [scrollable]="true">
+      <div class="panel pestanas" [class.recargando]="cargando()">
+        <p-tabs [value]="pestana()" (valueChange)="pestana.set($event)" class="gp-pestanas" [scrollable]="true">
           <p-tablist>
             <p-tab value="costos"><i class="pi pi-dollar" aria-hidden="true"></i> Costos</p-tab>
-            <p-tab value="profesionales"><i class="pi pi-user" aria-hidden="true"></i> Profesionales ({{ c.asignacionesProfesional.length }})</p-tab>
-            <p-tab value="recursos"><i class="pi pi-box" aria-hidden="true"></i> Recursos materiales ({{ c.recursos.length }})</p-tab>
+            <p-tab value="profesionales">
+              <i class="pi pi-user" aria-hidden="true"></i> Profesionales <span class="cuenta">({{ c.asignacionesProfesional.length }})</span>
+            </p-tab>
+            <p-tab value="recursos">
+              <i class="pi pi-box" aria-hidden="true"></i> Recursos materiales <span class="cuenta">({{ c.recursos.length }})</span>
+            </p-tab>
             <p-tab value="requerimientos">
               <i class="pi pi-id-card" aria-hidden="true"></i> Requerimientos
               @if (avisos().faltantes > 0) {
-                <span class="aviso">{{ avisos().faltantes }} sin cubrir</span>
+                <span class="aviso"><i class="pi pi-exclamation-circle" aria-hidden="true"></i>{{ avisos().faltantes }} sin cubrir</span>
               }
             </p-tab>
             <p-tab value="carga"><i class="pi pi-calendar" aria-hidden="true"></i> Carga semanal</p-tab>
@@ -103,7 +150,7 @@
           </p-tablist>
           <p-tabpanels>
             <p-tabpanel value="costos">
-              <div class="gp-rejilla graficos">
+              <div class="graficos">
                 @if (porTipo(); as g) {
                   <section class="gp-seccion">
                     <div class="gp-seccion-cabecera"><h2>Costo por tipo de recurso</h2></div>
@@ -117,7 +164,7 @@
                   </section>
                 }
               </div>
-              <section class="gp-seccion borde">
+              <section class="gp-seccion">
                 <div class="gp-seccion-cabecera">
                   <div>
                     <h2>Costo por actividad (EDT)</h2>
@@ -125,7 +172,7 @@
                   </div>
                   <p-button [label]="soloEtapas() ? 'Ver todo el detalle' : 'Ver solo etapas y actividades'" [text]="true" size="small" (onClick)="soloEtapas.set(!soloEtapas())" />
                 </div>
-                <p-table [value]="filasCosto()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '900px' }" dataKey="id">
+                <p-table [value]="filasCosto()" styleClass="gp-tabla tabla-costos" [tableStyle]="{ 'min-width': '900px' }" dataKey="id">
                   <ng-template #header>
                     <tr>
                       <th>Actividad</th>
@@ -138,7 +185,7 @@
                     </tr>
                   </ng-template>
                   <ng-template #body let-a>
-                    <tr [class.gp-fila-grupo]="a.nivel === 0">
+                    <tr [class.gp-fila-grupo]="a.nivel === 0" [class.fila-padre]="a.nivel > 0 && !a.esHoja">
                       <td>
                         <span class="sangria" [style.padding-left.px]="a.nivel * 18">
                           <span class="gp-codigo">{{ a.codigoEdt }}</span> {{ a.nombre }}
@@ -150,12 +197,15 @@
                       <td class="num">{{ a.costoReal | clp }}</td>
                       <td class="num" [class.gp-negativo]="desviacion(a) > 0">
                         @if (a.avance > 0 || a.costoReal > 0) {
+                          @if (desviacion(a) > 0) {
+                            <i class="pi pi-arrow-up marca" aria-hidden="true"></i>
+                          }
                           {{ desviacion(a) > 0 ? '+' : '' }}{{ desviacion(a) | clp }}
                         } @else {
-                          —
+                          <span class="gp-tenue">—</span>
                         }
                       </td>
-                      <td class="num">{{ a.avance | number: '1.0-1' }} %</td>
+                      <td class="num">{{ a.avance | number: '1.0-1' }} <span class="gp-tenue">%</span></td>
                     </tr>
                   </ng-template>
                   <ng-template #footer>
@@ -183,7 +233,13 @@
             </p-tabpanel>
             <p-tabpanel value="carga">
               @if (pestana() === 'carga') {
-                <gp-carga-semanal [proyectoId]="ctx.proyectoId()!" [proyecto]="ctx.proyecto()" [version]="c" />
+                <gp-carga-semanal
+                  [proyectoId]="ctx.proyectoId()!"
+                  [proyecto]="ctx.proyecto()"
+                  [version]="c"
+                  [animarEntrada]="!cargaDibujada()"
+                  (dibujada)="cargaDibujada.set(true)"
+                />
               }
             </p-tabpanel>
             @if (esAdmin()) {

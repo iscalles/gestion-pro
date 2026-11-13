@@ -1,7 +1,103 @@
+// Carga semanal: heatmap con la rampa turquesa de un tono. Tinta sobre los pasos 1-5, blanco sobre el 6.
+// La sobreasignación nunca es solo color: anillo de peligro, ícono y número.
+
+$celda-ancho: 48px;
+$celda-alto: 40px;
+$separacion: 2px;
+
+.filtros {
+  margin: 0;
+
+  .fecha {
+    flex-basis: 150px;
+  }
+}
+
+// ---- Leyenda
+.leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--gp-space-2) var(--gp-space-6);
+  margin-bottom: var(--gp-space-3);
+  font-size: var(--gp-text-sm);
+  color: var(--gp-text-muted);
+}
+
+.escala {
+  display: grid;
+  gap: 4px;
+  width: 216px;
+}
+
+.rampa {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: $separacion;
+
+  .paso {
+    height: 12px;
+    border-radius: 2px;
+  }
+}
+
+.marcas {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.2;
+}
+
+.sobre-ley {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.muestra-sobre {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 16px;
+  border-radius: 2px;
+  outline: 2px solid var(--gp-danger);
+  outline-offset: -2px;
+  background: var(--gp-danger-soft);
+  color: var(--gp-danger);
+
+  i {
+    font-size: 0.625rem;
+  }
+}
+
+// ---- Estados
+.esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: $separacion * 2;
+}
+
+.fila-esq {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  align-items: center;
+  gap: var(--gp-space-3);
+}
+
 .mapa {
   overflow-x: auto;
-  border: 1px solid var(--gp-line);
-  border-radius: var(--gp-radius-md);
+  border-top: 1px solid var(--gp-line);
+  border-bottom: 1px solid var(--gp-line);
+  transition: opacity var(--gp-dur-fast) var(--gp-ease-out);
+
+  &.recargando {
+    opacity: 0.55;
+  }
 
   &:focus-visible {
     outline: none;
@@ -9,21 +105,30 @@
   }
 }
 
+// ---- Heatmap
 table {
   border-collapse: separate;
-  border-spacing: 2px;
+  border-spacing: $separacion;
+  margin-block: var(--gp-space-2);
   font-size: var(--gp-text-sm);
   font-variant-numeric: tabular-nums;
 }
 
 th {
+  padding: 4px 2px;
   font-weight: 500;
   color: var(--gp-text-muted);
   white-space: nowrap;
-  padding: 4px 6px;
 
+  &.sem {
+    padding-inline: 0;
+    font-size: var(--gp-text-xs);
+    text-align: center;
+  }
+
+  // Semana de hoy: la misma marca turquesa de la Gantt y la curva S
   &.hoy {
-    color: var(--gp-text);
+    color: var(--gp-accent);
     font-weight: 700;
     box-shadow: inset 0 -2px 0 var(--gp-accent);
   }
@@ -32,13 +137,28 @@ th {
 .prof {
   position: sticky;
   left: 0;
-  z-index: 1;
+  z-index: 2;
   min-width: 170px;
+  height: $celda-alto;
+  padding: 0 var(--gp-space-3) 0 0;
   background: var(--gp-surface);
+  box-shadow: 1px 0 0 var(--gp-line);
   text-align: left;
   color: var(--gp-text);
+  line-height: 1.25;
 
-  span {
+  .nombre {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+      font-size: 0.7rem;
+      color: var(--gp-danger);
+    }
+  }
+
+  .gp-tenue {
     display: block;
     font-weight: 400;
     font-size: var(--gp-text-xs);
@@ -49,57 +169,143 @@ td {
   padding: 0;
 }
 
+// Rampa: el mismo paso en la leyenda y en las celdas (antes de .sobre, que la reemplaza)
+@for $n from 1 through 6 {
+  .paso[data-nivel='#{$n}'],
+  .celda[data-nivel='#{$n}'] {
+    background: var(--gp-rampa-#{$n});
+  }
+}
+
 .celda {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  width: 52px;
-  height: 36px;
+  gap: 3px;
+  width: $celda-ancho;
+  height: $celda-alto;
+  padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--gp-radius-sm);
+  background: transparent;
+  color: var(--gp-text);
   font: inherit;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
 
+  // Semana sin horas: solo el contorno fino
+  &[data-nivel='0'] {
+    box-shadow: inset 0 0 0 1px var(--gp-line);
+  }
+
+  &[data-nivel='6'] {
+    color: var(--gp-surface);
+    font-weight: 500;
+  }
+
   &.sobre {
+    background: var(--gp-danger-soft);
+    color: var(--gp-danger);
     font-weight: 700;
-    outline: 1px solid var(--gp-danger);
-    outline-offset: -1px;
+    outline: 2px solid var(--gp-danger);
+    outline-offset: -2px;
   }
 
   &.sel {
-    box-shadow: 0 0 0 2px var(--gp-surface), 0 0 0 4px var(--gp-text);
+    box-shadow:
+      0 0 0 2px var(--gp-surface),
+      0 0 0 4px var(--gp-text);
+  }
+
+  &:focus-visible {
+    box-shadow: var(--gp-focus);
   }
 
   i {
     font-size: 0.7rem;
   }
+
+  // Primera carga: cascada de celdas por columna (semana), de izquierda a derecha, ≤500 ms
+  &.gp-anim-celda {
+    animation-duration: var(--gp-dur-base);
+    animation-delay: calc(var(--col) * var(--paso));
+  }
 }
 
+// Con muchas celdas no se anima cada una: un velo por columna se desvanece de izquierda a derecha
+.por-columnas th.sem {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    top: 100%;
+    left: -$separacion;
+    right: -$separacion;
+    height: calc(var(--filas) * #{$celda-alto + $separacion});
+    background: var(--gp-surface);
+    pointer-events: none;
+    animation: gp-desaparecer var(--gp-dur-base) var(--gp-ease-out) both;
+    animation-delay: calc(var(--col) * var(--paso));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celda.gp-anim-celda,
+  .por-columnas th.sem::after {
+    animation-delay: 0ms;
+  }
+}
+
+// ---- Detalle de la celda elegida
 .detalle {
-  margin-top: var(--gp-space-3);
-  padding: var(--gp-space-3) var(--gp-space-4);
-  border: 1px solid var(--gp-line);
-  border-radius: var(--gp-radius-md);
-  background: var(--gp-canvas);
+  margin-top: var(--gp-space-4);
+  padding-top: var(--gp-space-3);
 
   h3 {
-    font-size: var(--gp-text-md);
     margin-bottom: var(--gp-space-2);
+    font-size: var(--gp-text-md);
+  }
+
+  .horas {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+
+    i {
+      font-size: 0.75rem;
+    }
   }
 
   ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--gp-text-sm);
   }
 
   li {
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: var(--gp-space-3);
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto) 64px;
+    gap: var(--gp-space-4);
+    padding: 6px 0;
+    border-top: 1px solid var(--gp-line);
+
+    strong {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+.ayuda {
+  padding-inline: 0;
+
+  i {
+    margin-right: 4px;
+    font-size: 0.8rem;
+    color: var(--gp-data);
   }
 }

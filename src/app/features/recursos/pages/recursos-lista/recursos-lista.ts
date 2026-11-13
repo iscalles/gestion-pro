@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
@@ -10,6 +10,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
+import { Resaltar } from '../../../../shared/ui/movimiento/resaltar';
 import { SelectorProyecto } from '../../../../shared/ui/selector-proyecto/selector-proyecto';
 import { ClpPipe } from '../../../../shared/pipes/clp.pipe';
 import { GraficoBarras, SerieBarras } from '../../../../shared/graficos/grafico-barras';
@@ -29,9 +30,9 @@ import { CatalogoProfesionales } from '../../ui/catalogo-profesionales/catalogo-
 @Component({
   selector: 'gp-recursos-lista',
   imports: [
-    DecimalPipe, RouterLink, ButtonModule, MessageModule, SkeletonModule, TabsModule, TableModule, ToastModule,
+    DecimalPipe, NgTemplateOutlet, RouterLink, ButtonModule, MessageModule, SkeletonModule, TabsModule, TableModule, ToastModule,
     ConfirmDialogModule, PageHeader, SelectorProyecto, ClpPipe, GraficoBarras, AsignacionesProfesional,
-    RecursosMateriales, Requerimientos, CargaSemanal, CatalogoProfesionales,
+    RecursosMateriales, Requerimientos, CargaSemanal, CatalogoProfesionales, Resaltar,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './recursos-lista.html',
@@ -49,6 +50,8 @@ export class RecursosLista {
   protected readonly error = signal<string | null>(null);
   protected readonly pestana = signal<string | number | undefined>('costos');
   protected readonly soloEtapas = signal(false);
+  /** Solo visual: la cascada del heatmap se dibuja una vez por visita, no al volver a la pestaña. */
+  protected readonly cargaDibujada = signal(false);
 
   protected readonly fmtPesos = fmtPesos;
   protected readonly fmtPesosEje = fmtPesosEje;

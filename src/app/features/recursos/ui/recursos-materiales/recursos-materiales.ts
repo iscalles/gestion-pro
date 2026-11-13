@@ -37,6 +37,12 @@ interface FormAsignacion {
   selector: 'gp-recursos-materiales',
   imports: [DecimalPipe, FormsModule, TableModule, ButtonModule, DialogModule, SelectModule, InputNumberModule, InputTextModule, MessageModule, ClpPipe],
   templateUrl: './recursos-materiales.html',
+  styles: `
+    .total-form {
+      font-size: var(--gp-text-lg);
+      line-height: 2.25rem;
+    }
+  `,
 })
 export class RecursosMateriales {
   readonly proyectoId = input.required<number>();

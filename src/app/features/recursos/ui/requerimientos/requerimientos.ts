@@ -47,7 +47,7 @@ import { Costos, Requerimiento, TipoProfesional } from '../../models/recurso.mod
               <gp-status-badge [tono]="r.cubierto ? 'ok' : 'warn'">{{ r.cubierto ? 'Cubierto' : 'Faltan ' + (r.cantidadRequerida - r.asignados) }}</gp-status-badge>
             </td>
             <td class="num">{{ r.tarifaHora | clp }}</td>
-            <td>{{ r.profesionales.length ? r.profesionales.join(', ') : '—' }}</td>
+            <td class="nombres" [class.gp-tenue]="!r.profesionales.length">{{ r.profesionales.length ? r.profesionales.join(', ') : '—' }}</td>
             <td>
               <div class="gp-acciones-fila">
                 <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar requerimiento ' + r.categoria" (onClick)="abrir(r)" />
@@ -57,7 +57,14 @@ import { Costos, Requerimiento, TipoProfesional } from '../../models/recurso.mod
           </tr>
         </ng-template>
         <ng-template #emptymessage>
-          <tr><td colspan="7" class="gp-vacio">Sin requerimientos registrados.</td></tr>
+          <tr>
+            <td colspan="7">
+              <div class="gp-vacio">
+                <i class="pi pi-id-card" aria-hidden="true"></i>
+                <p>Sin requerimientos registrados.</p>
+              </div>
+            </td>
+          </tr>
         </ng-template>
       </p-table>
     </section>
@@ -88,6 +95,12 @@ import { Costos, Requerimiento, TipoProfesional } from '../../models/recurso.mod
         </div>
       </ng-template>
     </p-dialog>
+  `,
+  styles: `
+    .nombres {
+      white-space: normal;
+      max-width: 32ch;
+    }
   `,
 })
 export class Requerimientos {

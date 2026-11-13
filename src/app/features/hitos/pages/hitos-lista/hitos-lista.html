@@ -17,9 +17,11 @@
   } @else if (ctx.proyectos().length === 0) {
     <div class="panel gp-vacio">
       @if (ctx.error(); as e) {
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
         <p-message severity="error" [text]="e" />
         <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="ctx.recargar()" />
       } @else {
+        <i class="pi pi-folder-open" aria-hidden="true"></i>
         <p>Todavía no tienes proyectos asignados.</p>
       }
     </div>
@@ -28,41 +30,78 @@
       <gp-selector-proyecto [ctx]="ctx" />
     </div>
 
-    <dl class="gp-cifras">
-      <div class="gp-cifra">
-        <dt>Hitos cumplidos</dt>
-        <dd>{{ resumen().cumplidos }} <span class="gp-tenue">de {{ resumen().total }}</span></dd>
-      </div>
-      <div class="gp-cifra">
-        <dt>Cumplidos en plazo</dt>
-        <dd>{{ resumen().enPlazo == null ? '—' : resumen().enPlazo + ' %' }}</dd>
-      </div>
-      <div class="gp-cifra">
-        <dt>Atrasados</dt>
-        <dd [class.gp-negativo]="resumen().atrasados > 0">{{ resumen().atrasados }}</dd>
-        <span class="gp-cifra-nota">Pendientes con la fecha comprometida vencida</span>
-      </div>
-      <div class="gp-cifra">
-        <dt>En riesgo</dt>
-        <dd [class.gp-negativo]="resumen().enRiesgo > 0">{{ resumen().enRiesgo }}</dd>
-        <span class="gp-cifra-nota">Sus actividades terminan después de lo comprometido</span>
-      </div>
-    </dl>
+    @if (!error()) {
+      @if (cargando() && hitos().length === 0) {
+        <div class="gp-cifras esqueleto" aria-busy="true">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="gp-cifra">
+              <p-skeleton width="55%" height="0.875rem" />
+              <p-skeleton width="40%" height="1.75rem" />
+            </div>
+          }
+        </div>
+      } @else {
+        <dl class="gp-cifras cifras">
+          <div class="gp-cifra">
+            <dt>Hitos cumplidos</dt>
+            <dd>
+              <span gpResaltar>{{ resumen().cumplidos }} <span class="gp-unidad">de {{ resumen().total }}</span></span>
+            </dd>
+          </div>
+          <div class="gp-cifra">
+            <dt>Cumplidos en plazo</dt>
+            <dd>
+              <span gpResaltar>
+                @if (resumen().enPlazo == null) {
+                  —
+                } @else {
+                  {{ resumen().enPlazo }} <span class="gp-unidad">%</span>
+                }
+              </span>
+            </dd>
+          </div>
+          <div class="gp-cifra">
+            <dt>Atrasados</dt>
+            <dd [class.gp-negativo]="resumen().atrasados > 0">
+              <span gpResaltar>
+                @if (resumen().atrasados > 0) {
+                  <i class="pi pi-clock" aria-hidden="true"></i>
+                }
+                {{ resumen().atrasados }}
+              </span>
+            </dd>
+            <span class="gp-cifra-nota">Pendientes con la fecha comprometida vencida</span>
+          </div>
+          <div class="gp-cifra">
+            <dt>En riesgo</dt>
+            <dd [class.alerta]="resumen().enRiesgo > 0">
+              <span gpResaltar>
+                @if (resumen().enRiesgo > 0) {
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                }
+                {{ resumen().enRiesgo }}
+              </span>
+            </dd>
+            <span class="gp-cifra-nota">Sus actividades terminan después de lo comprometido</span>
+          </div>
+        </dl>
+      }
+    }
 
-    <section class="panel">
+    <section class="panel" [attr.aria-busy]="cargando()">
       @if (error(); as e) {
-        <div class="gp-estado-carga">
+        <div class="gp-estado-carga" role="alert">
           <p-message severity="error" [text]="e" />
           <p-button label="Reintentar" icon="pi pi-refresh" [outlined]="true" (onClick)="cargar(ctx.proyectoId()!)" />
         </div>
       } @else if (cargando() && hitos().length === 0) {
         <div class="gp-estado-carga" aria-busy="true">
-          @for (i of [1, 2, 3]; track i) {
-            <p-skeleton height="1.75rem" />
+          @for (i of [1, 2, 3, 4]; track i) {
+            <p-skeleton height="2.25rem" />
           }
         </div>
       } @else {
-        <p-table [value]="hitos()" styleClass="gp-tabla" [tableStyle]="{ 'min-width': '1000px' }" dataKey="id">
+        <p-table [value]="hitos()" styleClass="gp-tabla tabla-hitos" [tableStyle]="{ 'min-width': '1000px' }" dataKey="id">
           <ng-template #header>
             <tr>
               <th>Código</th>
@@ -78,16 +117,29 @@
           <ng-template #body let-h>
             <tr class="gp-clic" [class.gp-fila-sel]="h.id === seleccionId()" (click)="seleccionId.set(h.id)">
               <td class="gp-codigo">{{ h.codigo }}</td>
-              <td>
+              <td class="col-hito">
                 <button type="button" class="enlace" (click)="seleccionId.set(h.id); $event.stopPropagation()" [attr.aria-pressed]="h.id === seleccionId()">{{ h.descripcion }}</button>
-                <br /><span class="gp-tenue">{{ h.responsable }}</span>
+                <span class="gp-tenue responsable">{{ h.responsable }}</span>
               </td>
-              <td class="gp-fecha">{{ h.fechaComprometida | date: 'dd-MM-yyyy' }}</td>
-              <td class="gp-fecha">
+              <td class="fecha">
+                <span class="dato" [class.gp-negativo]="h.estadoCalculado === 'ATRASADO'">
+                  @if (h.estadoCalculado === 'ATRASADO') {
+                    <i class="pi pi-clock" aria-hidden="true"></i>
+                  }
+                  {{ h.fechaComprometida | date: 'dd-MM-yyyy' }}
+                </span>
+              </td>
+              <td class="fecha">
                 @if (h.fechaReal) {
-                  Real {{ h.fechaReal | date: 'dd-MM-yyyy' }}
+                  <span class="dato" [class.alerta]="h.estado === 'CUMPLIDO' && !h.cumplidoEnPlazo">
+                    <span class="etq">Real</span>
+                    @if (h.estado === 'CUMPLIDO' && !h.cumplidoEnPlazo) {
+                      <i class="pi pi-clock" aria-hidden="true"></i>
+                    }
+                    {{ h.fechaReal | date: 'dd-MM-yyyy' }}
+                  </span>
                 } @else if (h.fechaPrevista) {
-                  <span [class.gp-negativo]="h.enRiesgo">
+                  <span class="dato" [class.prevista]="!h.enRiesgo" [class.alerta]="h.enRiesgo && h.estadoCalculado !== 'ATRASADO'" [class.gp-negativo]="h.enRiesgo && h.estadoCalculado === 'ATRASADO'">
                     @if (h.enRiesgo) {
                       <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
                     }
@@ -97,23 +149,25 @@
                     <span class="sr-only">(en riesgo)</span>
                   }
                 } @else {
-                  —
+                  <span class="gp-tenue">—</span>
                 }
               </td>
               <td>
-                <div class="gp-avance">
+                <div class="gp-avance" [class.completo]="h.criterios.length > 0 && h.criteriosCumplidos === h.criterios.length">
                   <p-progressbar [value]="h.criterios.length ? (h.criteriosCumplidos / h.criterios.length) * 100 : 0" [showValue]="false" [attr.aria-label]="h.criteriosCumplidos + ' de ' + h.criterios.length + ' criterios'" />
                   <span>{{ h.criteriosCumplidos }}/{{ h.criterios.length }}</span>
                 </div>
               </td>
               <td>
-                @for (k of h.kpis; track k.id) {
-                  <span class="kpi-mini" [pTooltip]="k.codigo + ' · ' + k.nombre + ': ' + fmtKpi(k.valor, k.unidad) + ' (' + semaforoTexto(k.semaforo) + ')'">
-                    <gp-status-badge [tono]="semaforoTono(k.semaforo)">{{ k.codigo }}<span class="sr-only">: {{ semaforoTexto(k.semaforo) }}</span></gp-status-badge>
-                  </span>
-                } @empty {
-                  <span class="gp-tenue">—</span>
-                }
+                <div class="kpi-chips">
+                  @for (k of h.kpis; track k.id) {
+                    <span class="kpi-mini" [pTooltip]="k.codigo + ' · ' + k.nombre + ': ' + fmtKpi(k.valor, k.unidad) + ' (' + semaforoTexto(k.semaforo) + ')'">
+                      <gp-status-badge [tono]="semaforoTono(k.semaforo)">{{ k.codigo }}<span class="sr-only">: {{ semaforoTexto(k.semaforo) }}</span></gp-status-badge>
+                    </span>
+                  } @empty {
+                    <span class="gp-tenue">—</span>
+                  }
+                </div>
               </td>
               <td><gp-status-badge [tono]="estado(h).tono">{{ estado(h).etiqueta }}</gp-status-badge></td>
               <td>
@@ -126,7 +180,12 @@
           </ng-template>
           <ng-template #emptymessage>
             <tr>
-              <td colspan="8" class="gp-vacio">Este proyecto aún no tiene hitos.</td>
+              <td colspan="8">
+                <div class="gp-vacio">
+                  <i class="pi pi-flag" aria-hidden="true"></i>
+                  <p>Este proyecto aún no tiene hitos.</p>
+                </div>
+              </td>
             </tr>
           </ng-template>
         </p-table>
@@ -134,84 +193,100 @@
     </section>
 
     @if (seleccion(); as h) {
-      <section class="panel detalle" aria-live="polite">
-        <div class="gp-seccion gp-seccion-cabecera cab">
-          <div>
-            <h2><span class="gp-codigo">{{ h.codigo }}</span> {{ h.descripcion }}</h2>
-            <p>
-              Responsable {{ h.responsable }} · comprometido para el {{ h.fechaComprometida | date: 'dd-MM-yyyy' }}
-              @if (h.fechaReal) {
-                · cumplido el {{ h.fechaReal | date: 'dd-MM-yyyy' }} ({{ h.cumplidoEnPlazo ? 'en plazo' : 'fuera de plazo' }})
-              }
-            </p>
-          </div>
-          <div class="gp-acciones-fila">
-            @if (h.estado === 'PENDIENTE') {
-              <p-button
-                label="Marcar cumplido"
-                icon="pi pi-check"
-                (onClick)="abrirCumplir(h)"
-                [disabled]="h.criteriosCumplidos < h.criterios.length"
-                [pTooltip]="h.criteriosCumplidos < h.criterios.length ? 'Primero cumple todos los criterios de aceptación' : ''"
-              />
-            } @else if (h.estado === 'CUMPLIDO') {
-              <p-button label="Volver a pendiente" icon="pi pi-undo" [outlined]="true" (onClick)="reabrir(h)" />
-            }
-            <p-button label="Editar" icon="pi pi-pencil" [outlined]="true" (onClick)="abrir(h)" />
-          </div>
-        </div>
-        <div class="gp-rejilla rejilla">
-          <section class="gp-seccion">
-            <h3>Criterios de aceptación</h3>
-            @if (h.criterios.length === 0) {
-              <p class="gp-tenue">Sin criterios definidos.</p>
-            } @else {
-              <ul class="criterios">
-                @for (c of h.criterios; track c.id) {
-                  <li>
-                    <p-checkbox
-                      [inputId]="'cr-' + c.id"
-                      [binary]="true"
-                      [ngModel]="c.cumplido"
-                      (ngModelChange)="marcar(h, c.id, $event)"
-                      [disabled]="h.estado !== 'PENDIENTE'"
-                    />
-                    <label [for]="'cr-' + c.id" [class.hecho]="c.cumplido">{{ c.descripcion }}</label>
-                  </li>
+      <section class="panel ficha" aria-live="polite">
+        <!-- Al elegir otro hito la ficha se vuelve a crear y aparece con un fundido; al recalcular, no. -->
+        @for (id of [h.id]; track id) {
+          <div class="gp-anim-aparecer">
+            <div class="gp-seccion gp-seccion-cabecera cab">
+              <div class="titulo">
+                <h2>
+                  <span class="gp-codigo">{{ h.codigo }}</span> {{ h.descripcion }}
+                  <gp-status-badge [tono]="estado(h).tono">{{ estado(h).etiqueta }}</gp-status-badge>
+                </h2>
+                <p>
+                  Responsable {{ h.responsable }} · comprometido para el <time class="gp-tnum">{{ h.fechaComprometida | date: 'dd-MM-yyyy' }}</time>
+                  @if (h.fechaReal) {
+                    · cumplido el <time class="gp-tnum">{{ h.fechaReal | date: 'dd-MM-yyyy' }}</time>
+                    <span [class.alerta]="!h.cumplidoEnPlazo" [class.en-plazo]="h.cumplidoEnPlazo">
+                      ({{ h.cumplidoEnPlazo ? 'en plazo' : 'fuera de plazo' }})
+                    </span>
+                  }
+                </p>
+              </div>
+              <div class="gp-acciones-fila acciones">
+                @if (h.estado === 'PENDIENTE') {
+                  <p-button
+                    label="Marcar cumplido"
+                    icon="pi pi-check"
+                    (onClick)="abrirCumplir(h)"
+                    [disabled]="h.criteriosCumplidos < h.criterios.length"
+                    [pTooltip]="h.criteriosCumplidos < h.criterios.length ? 'Primero cumple todos los criterios de aceptación' : ''"
+                  />
+                } @else if (h.estado === 'CUMPLIDO') {
+                  <p-button label="Volver a pendiente" icon="pi pi-undo" [outlined]="true" (onClick)="reabrir(h)" />
                 }
-              </ul>
-            }
-            <h3 class="sub">Actividades asociadas</h3>
-            @if (h.actividades.length === 0) {
-              <p class="gp-tenue">Sin actividades asociadas: la fecha prevista no se calcula.</p>
-            } @else {
-              <ul class="lista">
-                @for (a of h.actividades; track $index) {
-                  <li>{{ a }}</li>
-                }
-              </ul>
-            }
-          </section>
-          <section class="gp-seccion">
-            <h3>KPI vinculados</h3>
-            @if (h.kpis.length === 0) {
-              <p class="gp-tenue">Ningún KPI vinculado.</p>
-            } @else {
-              <ul class="kpis">
-                @for (k of h.kpis; track k.id) {
-                  <li>
-                    <span><span class="gp-codigo">{{ k.codigo }}</span> {{ k.nombre }}</span>
-                    <strong>{{ fmtKpi(k.valor, k.unidad) }}</strong>
-                    <gp-semaforo [valor]="k.semaforo" />
-                  </li>
-                }
-              </ul>
-            }
-            <div class="sub">
-              <gp-evidencias [evidencias]="h.evidencias" [urlSubida]="urlEvidencias(h)" (cambio)="cargar(ctx.proyectoId()!)" />
+                <p-button label="Editar" icon="pi pi-pencil" [outlined]="true" (onClick)="abrir(h)" />
+              </div>
             </div>
-          </section>
-        </div>
+            <div class="cuerpo">
+              <section class="gp-seccion">
+                <div class="sub-cab">
+                  <h3>Criterios de aceptación</h3>
+                  @if (h.criterios.length > 0) {
+                    <span class="cuenta" [class.completo]="h.criteriosCumplidos === h.criterios.length">{{ h.criteriosCumplidos }}/{{ h.criterios.length }}</span>
+                  }
+                </div>
+                @if (h.criterios.length === 0) {
+                  <p class="gp-tenue vacio">Sin criterios definidos.</p>
+                } @else {
+                  <ul class="criterios">
+                    @for (c of h.criterios; track c.id) {
+                      <li>
+                        <p-checkbox
+                          [inputId]="'cr-' + c.id"
+                          [binary]="true"
+                          [ngModel]="c.cumplido"
+                          (ngModelChange)="marcar(h, c.id, $event)"
+                          [disabled]="h.estado !== 'PENDIENTE'"
+                        />
+                        <label [for]="'cr-' + c.id" [class.hecho]="c.cumplido">{{ c.descripcion }}</label>
+                      </li>
+                    }
+                  </ul>
+                }
+                <h3 class="sub">Actividades asociadas</h3>
+                @if (h.actividades.length === 0) {
+                  <p class="gp-tenue vacio">Sin actividades asociadas: la fecha prevista no se calcula.</p>
+                } @else {
+                  <ul class="lista">
+                    @for (a of h.actividades; track $index) {
+                      <li>{{ a }}</li>
+                    }
+                  </ul>
+                }
+              </section>
+              <section class="gp-seccion">
+                <h3>KPI vinculados</h3>
+                @if (h.kpis.length === 0) {
+                  <p class="gp-tenue vacio">Ningún KPI vinculado.</p>
+                } @else {
+                  <ul class="kpis">
+                    @for (k of h.kpis; track k.id) {
+                      <li>
+                        <span class="kpi-nombre"><span class="gp-codigo">{{ k.codigo }}</span> {{ k.nombre }}</span>
+                        <strong class="gp-tnum">{{ fmtKpi(k.valor, k.unidad) }}</strong>
+                        <gp-semaforo [valor]="k.semaforo" />
+                      </li>
+                    }
+                  </ul>
+                }
+                <div class="sub evidencias">
+                  <gp-evidencias [evidencias]="h.evidencias" [urlSubida]="urlEvidencias(h)" (cambio)="cargar(ctx.proyectoId()!)" />
+                </div>
+              </section>
+            </div>
+          </div>
+        }
       </section>
     }
   }
@@ -285,7 +360,7 @@
   @if (cumplir(); as h) {
     <p class="texto">
       <strong>{{ h.codigo }} · {{ h.descripcion }}</strong> quedará cumplido. Se compara la fecha real con la comprometida
-      ({{ h.fechaComprometida | date: 'dd-MM-yyyy' }}).
+      (<time class="gp-tnum">{{ h.fechaComprometida | date: 'dd-MM-yyyy' }}</time>).
     </p>
     <div class="gp-campo">
       <label for="cu-fecha">Fecha real</label>

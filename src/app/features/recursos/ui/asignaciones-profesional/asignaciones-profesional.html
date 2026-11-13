@@ -31,11 +31,15 @@
       <tr>
         <td>{{ a.actividad }}</td>
         <td>
-          {{ a.profesional }}
-          @if (sobreasignados().has(a.profesionalId)) {
-            <i class="pi pi-exclamation-triangle gp-negativo" pTooltip="Sobreasignado en al menos una semana (ver Carga semanal)" aria-label="Sobreasignado" role="img"></i>
-          }
-          <br /><span class="gp-tenue">{{ a.especialidad }}</span>
+          <div class="doble">
+            <span class="con-icono">
+              {{ a.profesional }}
+              @if (sobreasignados().has(a.profesionalId)) {
+                <i class="pi pi-exclamation-triangle gp-negativo" pTooltip="Sobreasignado en al menos una semana (ver Carga semanal)" aria-label="Sobreasignado" role="img"></i>
+              }
+            </span>
+            <span class="gp-tenue">{{ a.especialidad }}</span>
+          </div>
         </td>
         <td class="num">{{ a.horasSemana | number: '1.0-1' }}</td>
         <td class="num">{{ a.semanas | number: '1.0-2' }}</td>
@@ -43,7 +47,12 @@
         <td class="num">{{ a.horasPlan | number: '1.0-1' }}</td>
         <td class="num">{{ a.costoPlan | clp }}</td>
         <td class="num">{{ a.horasReales | number: '1.0-1' }}</td>
-        <td class="num" [class.gp-negativo]="a.costoReal > a.costoPlan">{{ a.costoReal | clp }}</td>
+        <td class="num" [class.gp-negativo]="a.costoReal > a.costoPlan">
+          @if (a.costoReal > a.costoPlan) {
+            <i class="pi pi-arrow-up marca" aria-hidden="true"></i>
+          }
+          {{ a.costoReal | clp }}
+        </td>
         <td>
           <div class="gp-acciones-fila">
             <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar asignación de ' + a.profesional" (onClick)="abrir(a)" />
@@ -54,7 +63,7 @@
     </ng-template>
     <ng-template #footer>
       <tr>
-        <td colspan="5">Total ({{ filas().length }})</td>
+        <td colspan="5">Total <span class="gp-tenue">({{ filas().length }})</span></td>
         <td class="num">{{ totales().horas | number: '1.0-1' }}</td>
         <td class="num">{{ totales().plan | clp }}</td>
         <td class="num">{{ totales().reales | number: '1.0-1' }}</td>
@@ -63,7 +72,14 @@
       </tr>
     </ng-template>
     <ng-template #emptymessage>
-      <tr><td colspan="10" class="gp-vacio">Aún no hay profesionales asignados.</td></tr>
+      <tr>
+        <td colspan="10">
+          <div class="gp-vacio">
+            <i class="pi pi-user" aria-hidden="true"></i>
+            <p>Aún no hay profesionales asignados.</p>
+          </div>
+        </td>
+      </tr>
     </ng-template>
   </p-table>
 </section>

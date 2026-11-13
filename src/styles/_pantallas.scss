@@ -216,6 +216,28 @@
   .p-datatable-tbody > tr.gp-clic {
     cursor: pointer;
   }
+
+  // Montos y porcentajes a la derecha (PrimeNG fija text-align: start en celdas y encabezados)
+  td.num,
+  th.num {
+    text-align: right;
+  }
+
+  th.num .p-datatable-column-header-content {
+    justify-content: flex-end;
+  }
+
+  // Fila de totales
+  .p-datatable-tfoot > tr > td {
+    font-weight: 700;
+    border-top: 1px solid var(--gp-line-strong);
+    border-bottom: 0;
+  }
+}
+
+// Celda de tabla con estado vacío: sigue siendo celda (no flex), para no perder el colspan
+td.gp-vacio {
+  display: table-cell;
 }
 
 .gp-acciones-fila {

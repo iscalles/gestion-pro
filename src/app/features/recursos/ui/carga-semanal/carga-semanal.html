@@ -4,12 +4,12 @@
       <h2>Carga semanal del equipo</h2>
       <p>Horas por semana de cada profesional en todos sus proyectos, prorrateadas por los días hábiles de cada actividad.</p>
     </div>
-    <form class="gp-barra" style="margin: 0" (ngSubmit)="cargar()">
-      <div class="gp-campo" style="flex-basis: 150px">
+    <form class="gp-barra filtros" (ngSubmit)="cargar()">
+      <div class="gp-campo fecha">
         <label for="c-desde">Desde</label>
         <input pInputText type="date" id="c-desde" name="desde" [(ngModel)]="desde" />
       </div>
-      <div class="gp-campo" style="flex-basis: 150px">
+      <div class="gp-campo fecha">
         <label for="c-hasta">Hasta</label>
         <input pInputText type="date" id="c-hasta" name="hasta" [(ngModel)]="hasta" />
       </div>
@@ -17,27 +17,54 @@
     </form>
   </div>
 
-  <ul class="gp-leyenda">
-    <li><span class="gp-muestra" style="background: #cfe6e7"></span>Baja</li>
-    <li><span class="gp-muestra" style="background: #7fadaf"></span>Media</li>
-    <li><span class="gp-muestra" style="background: #2c6163"></span>Al 100 %</li>
-    <li><span class="gp-muestra" style="background: var(--gp-danger-soft); outline: 1px solid var(--gp-danger)"></span><i class="pi pi-exclamation-triangle" aria-hidden="true"></i> Sobreasignado</li>
-  </ul>
+  <!-- Leyenda: la rampa turquesa de un tono (claro = poca carga, oscuro = semana llena) y la sobreasignación -->
+  <div class="leyenda">
+    <div class="escala">
+      <span class="rampa" aria-hidden="true">
+        @for (n of pasosRampa; track n) {
+          <span class="paso" [attr.data-nivel]="n"></span>
+        }
+      </span>
+      <ul class="marcas">
+        <li>Baja</li>
+        <li>Media</li>
+        <li>Al 100 %</li>
+      </ul>
+    </div>
+    <p class="sobre-ley">
+      <span class="muestra-sobre" aria-hidden="true"><i class="pi pi-exclamation-triangle"></i></span>
+      Sobreasignado
+    </p>
+  </div>
 
   @if (error(); as e) {
     <p-message severity="error" [text]="e" />
   } @else if (cargando() && datos().length === 0) {
-    <p-skeleton height="8rem" />
+    <div class="esqueleto" aria-busy="true">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="fila-esq">
+          <p-skeleton width="8rem" height="0.875rem" />
+          <p-skeleton height="2.5rem" />
+        </div>
+      }
+    </div>
   } @else if (datos().length === 0) {
-    <p class="gp-vacio">No hay profesionales asignados a este proyecto.</p>
+    <div class="gp-vacio">
+      <i class="pi pi-calendar" aria-hidden="true"></i>
+      <p>No hay profesionales asignados a este proyecto.</p>
+    </div>
   } @else {
-    <div class="mapa" role="region" aria-label="Carga semanal por profesional" tabindex="0">
-      <table>
+    <div class="mapa" [class.recargando]="cargando()" [attr.aria-busy]="cargando()" role="region" aria-label="Carga semanal por profesional" tabindex="0">
+      <table
+        [class.por-columnas]="cascada() === 'columnas'"
+        [style.--paso]="pasoCascada() + 'ms'"
+        [style.--filas]="datos().length"
+      >
         <thead>
           <tr>
             <th scope="col" class="prof">Profesional</th>
-            @for (s of semanas(); track s) {
-              <th scope="col" [class.hoy]="s === hoySemana()" [attr.aria-label]="'Semana del ' + fmtFecha(s)">{{ fmtCorta(s) }}</th>
+            @for (s of semanas(); track s; let j = $index) {
+              <th scope="col" class="sem" [class.hoy]="s === hoySemana()" [style.--col]="j" [attr.aria-label]="'Semana del ' + fmtFecha(s)">{{ fmtCorta(s) }}</th>
             }
           </tr>
         </thead>
@@ -45,18 +72,25 @@
           @for (p of datos(); track p.profesionalId) {
             <tr>
               <th scope="row" class="prof">
-                {{ p.nombre }}
+                <span class="nombre">
+                  {{ p.nombre }}
+                  @if (p.sobreasignado) {
+                    <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                  }
+                </span>
                 <span class="gp-tenue">{{ p.horasSemanaDisp | number: '1.0-0' }} h/sem</span>
               </th>
-              @for (s of p.semanas; track s.semana) {
+              @for (s of p.semanas; track s.semana; let j = $index) {
                 <td>
                   <button
                     type="button"
                     class="celda"
+                    [class.gp-anim-celda]="cascada() === 'celdas'"
+                    [style.--col]="j"
+                    [attr.data-nivel]="nivel(s)"
                     [class.sobre]="s.sobreasignada"
                     [class.sel]="seleccion()?.p === p && seleccion()?.s === s"
-                    [style.background]="fondo(s)"
-                    [style.color]="tinta(s)"
+                    [attr.aria-pressed]="seleccion()?.p === p && seleccion()?.s === s"
                     [attr.aria-label]="etiqueta(p, s)"
                     [title]="etiqueta(p, s)"
                     (click)="seleccion.set({ p, s })"
@@ -78,7 +112,12 @@
       <div class="detalle" aria-live="polite">
         <h3>
           {{ sel.p.nombre }} · semana del {{ fmtFecha(sel.s.semana) }}:
-          <span [class.gp-negativo]="sel.s.sobreasignada">{{ sel.s.horas | number: '1.0-1' }} h de {{ sel.s.disponibles | number: '1.0-0' }} h</span>
+          <span class="horas" [class.gp-negativo]="sel.s.sobreasignada">
+            @if (sel.s.sobreasignada) {
+              <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+            }
+            {{ sel.s.horas | number: '1.0-1' }} h de {{ sel.s.disponibles | number: '1.0-0' }} h
+          </span>
         </h3>
         @if (sel.s.aportes.length === 0) {
           <p class="gp-tenue">Sin actividades esa semana.</p>
@@ -95,7 +134,7 @@
         }
       </div>
     } @else {
-      <p class="gp-nota">Elige una celda para ver qué actividades suman esas horas.</p>
+      <p class="gp-nota ayuda"><i class="pi pi-info-circle" aria-hidden="true"></i> Elige una celda para ver qué actividades suman esas horas.</p>
     }
   }
 </section>
